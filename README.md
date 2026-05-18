@@ -44,6 +44,14 @@ go get github.com/gofiber/fiber/v2
 # JWT
 go get github.com/golang-jwt/jwt/v4
 
+#
+go get gopkg.in/yaml.v3
+
+go get github.com/spf13/viper
+
+go get github.com/subosito/gotenv
+
+
 # ตรวจสอบ go.mod และ go.sum
 go mod tidy
 ```

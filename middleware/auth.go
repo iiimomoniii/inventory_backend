@@ -5,6 +5,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/iiimomoniii/inventory_backend/model"
 )
 
 func ExtractToken(authHeader string) string {
@@ -15,54 +16,60 @@ func ExtractToken(authHeader string) string {
 	return ""
 }
 
-// AuthMiddleware — validate JWT token แล้วเซ็ต Locals
-// ไม่ verify signature เพราะ verify ที่ API Gateway แล้ว
+// AuthMiddleware — validate JWT token
+// Priority 1: ไม่มี token      → 401 ทันที
+// Priority 2: token format ผิด → 401
+// Priority 3: token parse ผิด  → 401
+// Priority 4: claims ผิด       → 401
+// Priority 5: ผ่านทั้งหมด      → เซ็ต Locals แล้วไปต่อ
 func AuthMiddleware() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+
+		// Priority 1 — ไม่มี Authorization header
 		authHeader := c.Get("Authorization")
 		if authHeader == "" {
-			setEmptyLocals(c)
-			return c.Next()
+			return unauthorized(c, "Authorization header is missing")
 		}
 
+		// Priority 2 — format ต้องเป็น "Bearer <token>"
 		tokenString := ExtractToken(authHeader)
 		if tokenString == "" {
-			setEmptyLocals(c)
-			return c.Next()
+			return unauthorized(c, "Invalid token format, expected: Bearer <token>")
 		}
 
+		// Priority 3 — parse token
 		claims := jwt.MapClaims{}
 		token, _, err := jwt.NewParser().ParseUnverified(tokenString, claims)
 		if err != nil {
-			setEmptyLocals(c)
-			return c.Next()
+			return unauthorized(c, "Invalid token")
 		}
 
+		// Priority 4 — ดึง claims
 		claims, ok := token.Claims.(jwt.MapClaims)
 		if !ok {
-			setEmptyLocals(c)
-			return c.Next()
+			return unauthorized(c, "Invalid token claims")
 		}
 
-		// name
-		if name, ok := claims["name"].(string); ok {
-			c.Locals("name", name)
-		} else {
-			c.Locals("name", "")
-		}
-
-		// userID
-		if userID, ok := claims["preferred_username"].(string); ok {
-			c.Locals("userID", userID)
-		} else {
-			c.Locals("userID", "")
-		}
+		// Priority 5 — เซ็ต Locals แล้วไปต่อ
+		c.Locals("name", getStringClaim(claims, "name"))
+		c.Locals("userID", getStringClaim(claims, "preferred_username"))
 
 		return c.Next()
 	}
 }
 
-func setEmptyLocals(c *fiber.Ctx) {
-	c.Locals("name", "")
-	c.Locals("userID", "")
+// ─── Helpers ───────────────────────────────────────────────
+
+func unauthorized(c *fiber.Ctx, message string) error {
+	return c.Status(fiber.StatusUnauthorized).JSON(model.Response{
+		Status:  fiber.StatusUnauthorized,
+		Message: message,
+	})
+}
+
+func getStringClaim(claims jwt.MapClaims, key string) string {
+	if val, ok := claims[key].(string); ok {
+		return val
+	}
+	return ""
 }

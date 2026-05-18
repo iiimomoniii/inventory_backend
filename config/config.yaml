@@ -1,0 +1,11 @@
+app:
+  name: inventory-api
+  environment: development
+
+fiber:
+  address: 0.0.0.0:8080
+  readTimeout: 30000
+  writeTimeout: 30000
+  idleTimeout: 30000
+  readBufferSize: 8192    # 8KB — รองรับ JWT token
+  bodyLimitSize: 10485760 # 10MB

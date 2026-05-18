@@ -1,6 +1,8 @@
 package routes
 
 import (
+	"time"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/iiimomoniii/inventory_backend/config"
 	"github.com/iiimomoniii/inventory_backend/handler"
@@ -21,7 +23,12 @@ func NewAPIServer(cfg config.AppConfig) App {
 
 	// ─── Fiber App ─────────────────────────────────────────
 	app := fiber.New(fiber.Config{
-		AppName: cfg.AppName,
+		AppName:        cfg.App.Name,                                            // ← cfg.App.Name
+		ReadTimeout:    time.Millisecond * time.Duration(cfg.Fiber.ReadTimeout), // ← จาก yaml
+		WriteTimeout:   time.Millisecond * time.Duration(cfg.Fiber.WriteTimeout),
+		IdleTimeout:    time.Millisecond * time.Duration(cfg.Fiber.IdleTimeout),
+		ReadBufferSize: cfg.Fiber.ReadBufferSize, // ← 8192
+		BodyLimit:      cfg.Fiber.BodyLimitSize,
 	})
 
 	// ─── Global Middleware ─────────────────────────────────
@@ -51,12 +58,13 @@ func registerRoutes(app *fiber.App, productHandler *handler.ProductHandler) {
 	})
 
 	// ─── Auth middleware ────────────────────────────────────
-	// routes ด้านล่างทั้งหมดต้องผ่าน auth
 	app.Use(middleware.AuthMiddleware())
 	app.Use(middleware.I18nMiddleware)
 
 	// ─── Products ──────────────────────────────────────────
+	// ⚠️ specific routes ต้องอยู่ก่อน wildcard /:id เสมอ
 	app.Post("/products/search", productHandler.Search)
+	app.Post("/products/create/items", productHandler.CreateItems) // ← ย้ายขึ้นก่อน /:id
 	app.Get("/products/:id", productHandler.GetByID)
 	app.Post("/products", productHandler.Create)
 	app.Put("/products/:id", productHandler.Update)
@@ -66,7 +74,7 @@ func registerRoutes(app *fiber.App, productHandler *handler.ProductHandler) {
 
 // Start — implement App interface
 func (s *APIServer) Start() {
-	if err := s.server.Listen(s.cfg.AppPort); err != nil {
+	if err := s.server.Listen(s.cfg.Fiber.Address); err != nil { // ← cfg.Fiber.Address
 		panic(err)
 	}
 }
