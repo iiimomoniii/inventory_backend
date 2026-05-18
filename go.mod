@@ -1,10 +1,16 @@
 module github.com/iiimomoniii/inventory_backend
 
-go 1.21
+go 1.24.0
+
+toolchain go1.24.3
+
+require (
+	github.com/gofiber/fiber/v2 v2.52.13
+	github.com/golang-jwt/jwt/v4 v4.5.2
+)
 
 require (
 	github.com/andybalholm/brotli v1.1.0 // indirect
-	github.com/gofiber/fiber/v2 v2.52.13 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/klauspost/compress v1.17.9 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect

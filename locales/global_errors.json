@@ -1,0 +1,26 @@
+{
+  "GLB001": {
+    "id": "GLB001",
+    "name": "NOT_FOUND",
+    "messageEN": "Record not found",
+    "messageTH": "ไม่พบข้อมูล"
+  },
+  "GLB002": {
+    "id": "GLB002",
+    "name": "INTERNAL_ERROR",
+    "messageEN": "Internal server error",
+    "messageTH": "เกิดข้อผิดพลาดภายในระบบ"
+  },
+  "GLB003": {
+    "id": "GLB003",
+    "name": "INVALID_BODY",
+    "messageEN": "Invalid request body",
+    "messageTH": "รูปแบบข้อมูลไม่ถูกต้อง"
+  },
+  "GLB004": {
+    "id": "GLB004",
+    "name": "UNAUTHORIZED",
+    "messageEN": "Unauthorized",
+    "messageTH": "ไม่มีสิทธิ์เข้าถึง"
+  }
+}

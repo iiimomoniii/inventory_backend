@@ -31,14 +31,16 @@ func NewProductService(repo repository.ProductRepository) *ProductServiceImpl {
 }
 
 func (s *ProductServiceImpl) Search(ctx context.Context, req model.ProductSearchRequest) (*model.ProductSearchResponse, error) {
+	// Priority 1 — validate page
 	if req.Page < 0 {
-		return nil, &model.ValidationError{Code: "INV001", Message: fmt.Sprintf("invalid page: %d", req.Page)}
+		return nil, &model.ValidationError{Code: "PRD006"}
 	}
 	if req.PageSize <= 0 {
 		req.PageSize = 20
 	}
+	// Priority 2 — validate price range
 	if req.MinPrice != nil && req.MaxPrice != nil && *req.MinPrice > *req.MaxPrice {
-		return nil, &model.ValidationError{Code: "INV002", Message: "minPrice cannot be greater than maxPrice"}
+		return nil, &model.ValidationError{Code: "PRD007"}
 	}
 
 	products, total, err := s.Repo.Search(ctx, req)
@@ -61,8 +63,9 @@ func (s *ProductServiceImpl) Search(ctx context.Context, req model.ProductSearch
 }
 
 func (s *ProductServiceImpl) GetByID(ctx context.Context, id int64) (*model.ProductResponse, error) {
+	// Priority 1 — validate id
 	if id <= 0 {
-		return nil, &model.ValidationError{Code: "INV003", Message: "id must be greater than 0"}
+		return nil, &model.ValidationError{Code: "PRD005"}
 	}
 	return s.Repo.FindByID(ctx, id)
 }
@@ -71,17 +74,21 @@ func (s *ProductServiceImpl) Create(ctx context.Context, req model.ProductCreate
 	req.Name = strings.TrimSpace(req.Name)
 	req.Category = strings.TrimSpace(req.Category)
 
+	// Priority 1 — name
 	if req.Name == "" {
-		return nil, &model.ValidationError{Code: "INV004", Message: "name is required"}
+		return nil, &model.ValidationError{Code: "PRD001"}
 	}
+	// Priority 2 — category
 	if req.Category == "" {
-		return nil, &model.ValidationError{Code: "INV005", Message: "category is required"}
+		return nil, &model.ValidationError{Code: "PRD002"}
 	}
+	// Priority 3 — price
 	if req.Price <= 0 {
-		return nil, &model.ValidationError{Code: "INV006", Message: "price must be greater than 0"}
+		return nil, &model.ValidationError{Code: "PRD003"}
 	}
+	// Priority 4 — stock
 	if req.Stock < 0 {
-		return nil, &model.ValidationError{Code: "INV007", Message: "stock must be >= 0"}
+		return nil, &model.ValidationError{Code: "PRD004"}
 	}
 
 	product, err := s.Repo.Create(ctx, req, createdBy)
@@ -92,26 +99,32 @@ func (s *ProductServiceImpl) Create(ctx context.Context, req model.ProductCreate
 }
 
 func (s *ProductServiceImpl) Update(ctx context.Context, id int64, req model.ProductUpdateRequest, updatedBy string) (*model.ProductResponse, error) {
+	// Priority 1 — id
 	if id <= 0 {
-		return nil, &model.ValidationError{Code: "INV003", Message: "id must be greater than 0"}
+		return nil, &model.ValidationError{Code: "PRD005"}
 	}
+	// Priority 2 — ต้องมีอย่างน้อย 1 field
 	if req.Price == nil && req.Stock == nil {
-		return nil, &model.ValidationError{Code: "INV008", Message: "at least one field (price or stock) must be provided"}
+		return nil, &model.ValidationError{Code: "PRD008"}
 	}
+	// Priority 3 — price
 	if req.Price != nil && *req.Price <= 0 {
-		return nil, &model.ValidationError{Code: "INV006", Message: "price must be greater than 0"}
+		return nil, &model.ValidationError{Code: "PRD003"}
 	}
+	// Priority 4 — stock
 	if req.Stock != nil && *req.Stock < 0 {
-		return nil, &model.ValidationError{Code: "INV007", Message: "stock must be >= 0"}
+		return nil, &model.ValidationError{Code: "PRD004"}
 	}
 
 	return s.Repo.Update(ctx, id, req, updatedBy)
 }
 
 func (s *ProductServiceImpl) Delete(ctx context.Context, id int64) error {
+	// Priority 1 — id
 	if id <= 0 {
-		return &model.ValidationError{Code: "INV003", Message: "id must be greater than 0"}
+		return &model.ValidationError{Code: "PRD005"}
 	}
+
 	if err := s.Repo.Delete(ctx, id); err != nil {
 		var notFound *model.NotFoundError
 		if errors.As(err, &notFound) {

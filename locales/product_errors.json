@@ -1,0 +1,11 @@
+{
+  "PRD001": { "id": "PRD001", "name": "NAME_REQUIRED",        "messageEN": "Name is required",                                     "messageTH": "กรุณากรอกชื่อสินค้า" },
+  "PRD002": { "id": "PRD002", "name": "CATEGORY_REQUIRED",    "messageEN": "Category is required",                                 "messageTH": "กรุณาเลือกหมวดหมู่" },
+  "PRD003": { "id": "PRD003", "name": "PRICE_INVALID",        "messageEN": "Price must be greater than 0",                         "messageTH": "ราคาต้องมากกว่า 0" },
+  "PRD004": { "id": "PRD004", "name": "STOCK_INVALID",        "messageEN": "Stock must be greater than or equal to 0",             "messageTH": "จำนวนต้องไม่ติดลบ" },
+  "PRD005": { "id": "PRD005", "name": "INVALID_ID",           "messageEN": "Invalid ID",                                           "messageTH": "รหัสไม่ถูกต้อง" },
+  "PRD006": { "id": "PRD006", "name": "INVALID_PAGE",         "messageEN": "Invalid page number",                                  "messageTH": "หมายเลขหน้าไม่ถูกต้อง" },
+  "PRD007": { "id": "PRD007", "name": "INVALID_PRICE_RANGE",  "messageEN": "minPrice cannot be greater than maxPrice",             "messageTH": "ราคาต่ำสุดต้องไม่มากกว่าราคาสูงสุด" },
+  "PRD008": { "id": "PRD008", "name": "NO_FIELDS_TO_UPDATE",  "messageEN": "At least one field (price or stock) must be provided", "messageTH": "กรุณาระบุข้อมูลที่ต้องการอัปเดต (ราคา หรือ จำนวน)" },
+  "PRD009": { "id": "PRD009", "name": "PARTIAL_FAILED",       "messageEN": "Some items failed to process",                         "messageTH": "บางรายการดำเนินการไม่สำเร็จ" }
+}

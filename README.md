@@ -28,6 +28,10 @@ inventory_backend/
 ```bash
 # 1. HTTP Framework
 go get github.com/gofiber/fiber/v2
+go get github.com/golang-jwt/jwt/v4
+go get github.com/nicksnyder/go-i18n/v2/i18n
+go get golang.org/x/text/language
+
 
 # 2. ตรวจสอบว่า go.mod และ go.sum อัพเดตแล้ว
 go mod tidy

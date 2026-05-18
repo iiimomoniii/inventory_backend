@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"strings"
 	"sync"
 	"time"
 
@@ -9,8 +10,8 @@ import (
 )
 
 // InMemoryProductRepository — ใช้สำหรับ dev/demo
-// ในของจริงเปลี่ยนเป็น PostgresProductRepository แทน
-// โดยไม่ต้องแตะ service หรือ handler เลย เพราะ implement interface เดียวกัน
+// ไม่ต้องต่อ DB จริง
+// เปลี่ยนเป็น PostgresProductRepository ได้โดยไม่แตะ service เลย
 
 type InMemoryProductRepository struct {
 	mu       sync.RWMutex
@@ -27,8 +28,9 @@ func NewInMemoryProductRepository() *InMemoryProductRepository {
 	return r
 }
 
+// seed — ข้อมูลตัวอย่างเริ่มต้น
 func (r *InMemoryProductRepository) seed() {
-	items := []model.ProductResponse{
+	items := []model.ProductCreateRequest{
 		{Name: "Apple", Category: "Fruit", Price: 10.0, Stock: 100},
 		{Name: "Banana", Category: "Fruit", Price: 5.0, Stock: 200},
 		{Name: "Carrot", Category: "Vegetable", Price: 8.0, Stock: 5},
@@ -36,10 +38,16 @@ func (r *InMemoryProductRepository) seed() {
 		{Name: "Pork", Category: "Meat", Price: 120.0, Stock: 30},
 	}
 	for _, item := range items {
-		item.ID = r.nextID
-		item.CreatedAt = time.Now()
-		item.UpdatedAt = time.Now()
-		r.products[r.nextID] = item
+		p := model.ProductResponse{
+			ID:        r.nextID,
+			Name:      item.Name,
+			Category:  item.Category,
+			Price:     item.Price,
+			Stock:     item.Stock,
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		}
+		r.products[r.nextID] = p
 		r.nextID++
 	}
 }
@@ -51,8 +59,7 @@ func (r *InMemoryProductRepository) Search(_ context.Context, req model.ProductS
 	var result []model.ProductResponse
 	for _, p := range r.products {
 		if req.Name != nil && *req.Name != "" {
-			// simple contains check
-			if len(p.Name) < len(*req.Name) {
+			if !strings.Contains(strings.ToLower(p.Name), strings.ToLower(*req.Name)) {
 				continue
 			}
 		}

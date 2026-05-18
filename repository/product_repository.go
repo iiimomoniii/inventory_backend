@@ -6,8 +6,10 @@ import (
 	"github.com/iiimomoniii/inventory_backend/model"
 )
 
-// Interface เท่านั้น — implementation จริงต่อ DB แยกไฟล์
-// ทำให้ service และ test ไม่พึ่ง DB ตรงๆ
+// ─── Interface ─────────────────────────────────────────────
+// ใครก็ implement ได้ถ้ามี method ครบ
+// ตอนนี้ใช้ InMemoryProductRepository
+// อนาคตเปลี่ยนเป็น PostgresProductRepository โดยไม่แตะ service
 
 type ProductRepository interface {
 	Search(ctx context.Context, req model.ProductSearchRequest) ([]model.ProductResponse, int, error)

@@ -45,26 +45,16 @@ type ProductSearchResponse struct {
 	PageSize      int               `json:"pageSize"`
 }
 
-type Response struct {
-	Message string `json:"message"`
-	Data    any    `json:"data,omitempty"`
-}
-
 // ─── Custom Errors ─────────────────────────────────────────
 
 type NotFoundError struct {
 	ID int64
 }
 
-func (e *NotFoundError) Error() string {
-	return "product not found"
-}
+func (e *NotFoundError) Error() string { return "not found" }
 
 type ValidationError struct {
-	Code    string
-	Message string
+	Code string
 }
 
-func (e *ValidationError) Error() string {
-	return e.Message
-}
+func (e *ValidationError) Error() string { return e.Code }
