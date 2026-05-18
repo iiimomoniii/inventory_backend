@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/yourname/inventory-api/model"
-	"github.com/yourname/inventory-api/repository"
+	"github.com/iiimomoniii/inventory_backend/model"
+	"github.com/iiimomoniii/inventory_backend/repository"
 )
 
 // ─── Interface ─────────────────────────────────────────────

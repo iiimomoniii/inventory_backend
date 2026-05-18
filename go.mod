@@ -1,3 +1,3 @@
-module github.com/yourname/inventory-api
+module github.com/iiimomoniii/inventory_backend
 
 go 1.21

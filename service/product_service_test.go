@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/yourname/inventory-api/model"
+	"github.com/iiimomoniii/inventory_backend/model"
 )
 
 // ─── Mock Repository ───────────────────────────────────────
@@ -131,7 +131,10 @@ func TestGetByID_Success(t *testing.T) {
 }
 
 func TestGetByID_InvalidID(t *testing.T) {
-	tests := []struct{ name string; id int64 }{
+	tests := []struct {
+		name string
+		id   int64
+	}{
 		{"zero", 0},
 		{"negative", -5},
 	}

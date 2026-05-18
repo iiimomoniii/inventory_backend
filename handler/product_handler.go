@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/yourname/inventory-api/model"
-	"github.com/yourname/inventory-api/service"
+	"github.com/iiimomoniii/inventory_backend/model"
+	"github.com/iiimomoniii/inventory_backend/service"
 )
 
 type ProductHandler struct {

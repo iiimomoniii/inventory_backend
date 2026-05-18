@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/yourname/inventory-api/model"
+	"github.com/iiimomoniii/inventory_backend/model"
 )
 
 // InMemoryProductRepository — ใช้สำหรับ dev/demo

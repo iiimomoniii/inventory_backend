@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/yourname/inventory-api/handler"
-	"github.com/yourname/inventory-api/repository"
-	"github.com/yourname/inventory-api/service"
+	"github.com/iiimomoniii/inventory_backend/handler"
+	"github.com/iiimomoniii/inventory_backend/repository"
+	"github.com/iiimomoniii/inventory_backend/service"
 )
 
 // AppConfig — config ที่โหลดจาก env

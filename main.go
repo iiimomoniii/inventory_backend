@@ -1,6 +1,6 @@
 package main
 
-import "github.com/yourname/inventory-api/routes"
+import "github.com/iiimomoniii/inventory_backend/routes"
 
 func main() {
 	// Bootstrap wire ทุกอย่าง แล้วส่ง server กลับมา

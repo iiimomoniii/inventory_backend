@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 
-	"github.com/yourname/inventory-api/model"
+	"github.com/iiimomoniii/inventory_backend/model"
 )
 
 // Interface เท่านั้น — implementation จริงต่อ DB แยกไฟล์
