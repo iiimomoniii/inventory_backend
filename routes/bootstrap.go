@@ -5,6 +5,8 @@ import (
 	"os"
 	"os/signal"
 	"sync"
+
+	"github.com/iiimomoniii/inventory_backend/config"
 )
 
 // App interface — กำหนดว่า server ต้องทำอะไรได้บ้าง
@@ -19,7 +21,7 @@ type App interface {
 func Bootstrap() (App, *sync.WaitGroup) {
 
 	// 1. Load config จาก env
-	cfg, err := loadConfig()
+	cfg, err := config.LoadConfig()
 	if err != nil {
 		fmt.Println("Error loading config:", err)
 	}

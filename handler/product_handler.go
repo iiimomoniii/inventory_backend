@@ -1,13 +1,10 @@
 package handler
 
 import (
-	"context"
-	"encoding/json"
 	"errors"
-	"net/http"
 	"strconv"
-	"strings"
 
+	"github.com/gofiber/fiber/v2"
 	"github.com/iiimomoniii/inventory_backend/model"
 	"github.com/iiimomoniii/inventory_backend/service"
 )
@@ -20,137 +17,107 @@ func NewProductHandler(svc service.ProductService) *ProductHandler {
 	return &ProductHandler{Service: svc}
 }
 
-// ServeHTTP — router อย่างง่าย
-// POST /products/search
-// GET  /products/{id}
-// POST /products
-// PUT  /products/{id}
-// DELETE /products/{id}
-func (h *ProductHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	path := strings.TrimPrefix(r.URL.Path, "/products")
-	path = strings.TrimSuffix(path, "/")
-
-	switch {
-	case r.Method == http.MethodPost && path == "/search":
-		h.search(w, r)
-	case r.Method == http.MethodPost && path == "":
-		h.create(w, r)
-	case r.Method == http.MethodGet && path != "":
-		h.getByID(w, r, strings.TrimPrefix(path, "/"))
-	case r.Method == http.MethodPut && path != "":
-		h.update(w, r, strings.TrimPrefix(path, "/"))
-	case r.Method == http.MethodDelete && path != "":
-		h.delete(w, r, strings.TrimPrefix(path, "/"))
-	default:
-		writeJSON(w, http.StatusNotFound, model.Response{Message: "route not found"})
-	}
-}
-
-func (h *ProductHandler) search(w http.ResponseWriter, r *http.Request) {
+// Search godoc
+// @Summary Search products
+// @Router /products/search [post]
+func (h *ProductHandler) Search(c *fiber.Ctx) error {
 	var req model.ProductSearchRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSON(w, http.StatusBadRequest, model.Response{Message: "invalid request body"})
-		return
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(model.Response{Message: "invalid request body"})
 	}
 
-	result, err := h.Service.Search(context.Background(), req)
+	result, err := h.Service.Search(c.UserContext(), req)
 	if err != nil {
-		writeError(w, err)
-		return
+		return handleError(c, err)
 	}
-	writeJSON(w, http.StatusOK, model.Response{Message: "success", Data: result})
+	return c.JSON(model.Response{Message: "success", Data: result})
 }
 
-func (h *ProductHandler) getByID(w http.ResponseWriter, r *http.Request, idStr string) {
-	id, err := strconv.ParseInt(idStr, 10, 64)
+// GetByID godoc
+// @Summary Get product by ID
+// @Router /products/:id [get]
+func (h *ProductHandler) GetByID(c *fiber.Ctx) error {
+	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
 	if err != nil {
-		writeJSON(w, http.StatusBadRequest, model.Response{Message: "invalid id"})
-		return
+		return c.Status(fiber.StatusBadRequest).JSON(model.Response{Message: "invalid id"})
 	}
 
-	product, err := h.Service.GetByID(context.Background(), id)
+	product, err := h.Service.GetByID(c.UserContext(), id)
 	if err != nil {
-		writeError(w, err)
-		return
+		return handleError(c, err)
 	}
-	writeJSON(w, http.StatusOK, model.Response{Message: "success", Data: product})
+	return c.JSON(model.Response{Message: "success", Data: product})
 }
 
-func (h *ProductHandler) create(w http.ResponseWriter, r *http.Request) {
+// Create godoc
+// @Summary Create product
+// @Router /products [post]
+func (h *ProductHandler) Create(c *fiber.Ctx) error {
 	var req model.ProductCreateRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSON(w, http.StatusBadRequest, model.Response{Message: "invalid request body"})
-		return
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(model.Response{Message: "invalid request body"})
 	}
 
-	userID := r.Header.Get("X-User-ID")
-	if userID == "" {
-		userID = "anonymous"
-	}
+	// ในของจริงดึงจาก middleware auth
+	userID := c.Get("X-User-ID", "anonymous")
 
-	product, err := h.Service.Create(context.Background(), req, userID)
+	product, err := h.Service.Create(c.UserContext(), req, userID)
 	if err != nil {
-		writeError(w, err)
-		return
+		return handleError(c, err)
 	}
-	writeJSON(w, http.StatusCreated, model.Response{Message: "created", Data: product})
+	return c.Status(fiber.StatusCreated).JSON(model.Response{Message: "created", Data: product})
 }
 
-func (h *ProductHandler) update(w http.ResponseWriter, r *http.Request, idStr string) {
-	id, err := strconv.ParseInt(idStr, 10, 64)
+// Update godoc
+// @Summary Update product
+// @Router /products/:id [put]
+func (h *ProductHandler) Update(c *fiber.Ctx) error {
+	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
 	if err != nil {
-		writeJSON(w, http.StatusBadRequest, model.Response{Message: "invalid id"})
-		return
+		return c.Status(fiber.StatusBadRequest).JSON(model.Response{Message: "invalid id"})
 	}
 
 	var req model.ProductUpdateRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSON(w, http.StatusBadRequest, model.Response{Message: "invalid request body"})
-		return
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(model.Response{Message: "invalid request body"})
 	}
 
-	userID := r.Header.Get("X-User-ID")
-	product, err := h.Service.Update(context.Background(), id, req, userID)
+	userID := c.Get("X-User-ID", "anonymous")
+
+	product, err := h.Service.Update(c.UserContext(), id, req, userID)
 	if err != nil {
-		writeError(w, err)
-		return
+		return handleError(c, err)
 	}
-	writeJSON(w, http.StatusOK, model.Response{Message: "updated", Data: product})
+	return c.JSON(model.Response{Message: "updated", Data: product})
 }
 
-func (h *ProductHandler) delete(w http.ResponseWriter, r *http.Request, idStr string) {
-	id, err := strconv.ParseInt(idStr, 10, 64)
+// Delete godoc
+// @Summary Delete product
+// @Router /products/:id [delete]
+func (h *ProductHandler) Delete(c *fiber.Ctx) error {
+	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
 	if err != nil {
-		writeJSON(w, http.StatusBadRequest, model.Response{Message: "invalid id"})
-		return
+		return c.Status(fiber.StatusBadRequest).JSON(model.Response{Message: "invalid id"})
 	}
 
-	if err := h.Service.Delete(context.Background(), id); err != nil {
-		writeError(w, err)
-		return
+	if err := h.Service.Delete(c.UserContext(), id); err != nil {
+		return handleError(c, err)
 	}
-	writeJSON(w, http.StatusOK, model.Response{Message: "deleted"})
+	return c.JSON(model.Response{Message: "deleted"})
 }
 
-// ─── Helpers ───────────────────────────────────────────────
+// ─── Error Handler ─────────────────────────────────────────
 
-func writeJSON(w http.ResponseWriter, status int, v any) {
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(v)
-}
-
-func writeError(w http.ResponseWriter, err error) {
+func handleError(c *fiber.Ctx, err error) error {
 	var notFound *model.NotFoundError
 	if errors.As(err, &notFound) {
-		writeJSON(w, http.StatusNotFound, model.Response{Message: "not found"})
-		return
+		return c.Status(fiber.StatusNotFound).JSON(model.Response{Message: "not found"})
 	}
+
 	var valErr *model.ValidationError
 	if errors.As(err, &valErr) {
-		writeJSON(w, http.StatusBadRequest, model.Response{Message: valErr.Message})
-		return
+		return c.Status(fiber.StatusBadRequest).JSON(model.Response{Message: valErr.Message})
 	}
-	writeJSON(w, http.StatusInternalServerError, model.Response{Message: "internal server error"})
+
+	return c.Status(fiber.StatusInternalServerError).JSON(model.Response{Message: "internal server error"})
 }
