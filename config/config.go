@@ -15,8 +15,9 @@ var configFile []byte
 // ─── Struct ────────────────────────────────────────────────
 
 type AppConfig struct {
-	App   AppInfo     `mapstructure:"app"`
-	Fiber FiberConfig `mapstructure:"fiber"`
+	App      AppInfo        `mapstructure:"app"`
+	Fiber    FiberConfig    `mapstructure:"fiber"`
+	Database DatabaseConfig `mapstructure:"database"`
 }
 
 type AppInfo struct {
@@ -33,17 +34,24 @@ type FiberConfig struct {
 	BodyLimitSize  int    `mapstructure:"bodyLimitSize"`
 }
 
+type DatabaseConfig struct {
+	Host     string `mapstructure:"host"`
+	Port     int    `mapstructure:"port"`
+	User     string `mapstructure:"user"`
+	Password string `mapstructure:"password"`
+	DBName   string `mapstructure:"dbname"`
+	SSLMode  string `mapstructure:"sslmode"`
+}
+
 // ─── Loader ────────────────────────────────────────────────
 
 func LoadConfig() (AppConfig, error) {
-	// โหลด .env ก่อน
 	gotenv.Load()
 
 	viper.SetConfigType("yaml")
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "__", "-", "_"))
 
-	// โหลดจาก config.yaml ที่ embed ไว้
 	if err := viper.ReadConfig(bytes.NewBuffer(configFile)); err != nil {
 		return AppConfig{}, err
 	}
@@ -53,26 +61,22 @@ func LoadConfig() (AppConfig, error) {
 		return AppConfig{}, err
 	}
 
-	// Override ด้วย .env หรือ ENV variable
 	overrideWithEnv(&cfg)
-
 	return cfg, nil
 }
 
-// overrideWithEnv — ค่าจาก .env ทับค่าจาก yaml
 func overrideWithEnv(cfg *AppConfig) {
-
 	// ─── App ───────────────────────────────────────────────
-	if name := viper.GetString("APP__NAME"); name != "" {
-		cfg.App.Name = name
+	if v := viper.GetString("APP__NAME"); v != "" {
+		cfg.App.Name = v
 	}
-	if env := viper.GetString("APP__ENVIRONMENT"); env != "" {
-		cfg.App.Environment = env
+	if v := viper.GetString("APP__ENVIRONMENT"); v != "" {
+		cfg.App.Environment = v
 	}
 
 	// ─── Fiber ─────────────────────────────────────────────
-	if addr := viper.GetString("FIBER__ADDRESS"); addr != "" {
-		cfg.Fiber.Address = addr
+	if v := viper.GetString("FIBER__ADDRESS"); v != "" {
+		cfg.Fiber.Address = v
 	}
 	if v := viper.GetInt("FIBER__READ_TIMEOUT"); v != 0 {
 		cfg.Fiber.ReadTimeout = v
@@ -88,5 +92,25 @@ func overrideWithEnv(cfg *AppConfig) {
 	}
 	if v := viper.GetInt("FIBER__BODY_LIMIT_SIZE"); v != 0 {
 		cfg.Fiber.BodyLimitSize = v
+	}
+
+	// ─── Database ──────────────────────────────────────────
+	if v := viper.GetString("DATABASE__HOST"); v != "" {
+		cfg.Database.Host = v
+	}
+	if v := viper.GetInt("DATABASE__PORT"); v != 0 {
+		cfg.Database.Port = v
+	}
+	if v := viper.GetString("DATABASE__USER"); v != "" {
+		cfg.Database.User = v
+	}
+	if v := viper.GetString("DATABASE__PASSWORD"); v != "" {
+		cfg.Database.Password = v
+	}
+	if v := viper.GetString("DATABASE__DBNAME"); v != "" {
+		cfg.Database.DBName = v
+	}
+	if v := viper.GetString("DATABASE__SSLMODE"); v != "" {
+		cfg.Database.SSLMode = v
 	}
 }

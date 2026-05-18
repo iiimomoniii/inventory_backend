@@ -51,6 +51,9 @@ go get github.com/spf13/viper
 
 go get github.com/subosito/gotenv
 
+go get github.com/golang-migrate/migrate/v4
+go get github.com/golang-migrate/migrate/v4/database/postgres
+go get github.com/golang-migrate/migrate/v4/source/file
 
 # ตรวจสอบ go.mod และ go.sum
 go mod tidy
