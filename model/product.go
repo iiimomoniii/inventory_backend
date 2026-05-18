@@ -1,0 +1,70 @@
+package model
+
+import "time"
+
+// ─── Request ───────────────────────────────────────────────
+
+type ProductSearchRequest struct {
+	Name     *string  `json:"name,omitempty"`
+	Category *string  `json:"category,omitempty"`
+	MinPrice *float64 `json:"minPrice,omitempty"`
+	MaxPrice *float64 `json:"maxPrice,omitempty"`
+	Page     int      `json:"page"`
+	PageSize int      `json:"pageSize"`
+}
+
+type ProductCreateRequest struct {
+	Name     string  `json:"name"`
+	Category string  `json:"category"`
+	Price    float64 `json:"price"`
+	Stock    int     `json:"stock"`
+}
+
+type ProductUpdateRequest struct {
+	Price *float64 `json:"price,omitempty"`
+	Stock *int     `json:"stock,omitempty"`
+}
+
+// ─── Response ──────────────────────────────────────────────
+
+type ProductResponse struct {
+	ID        int64     `json:"id"`
+	Name      string    `json:"name"`
+	Category  string    `json:"category"`
+	Price     float64   `json:"price"`
+	Stock     int       `json:"stock"`
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
+}
+
+type ProductSearchResponse struct {
+	Data          []ProductResponse `json:"data"`
+	TotalElements int               `json:"totalElements"`
+	TotalPages    int               `json:"totalPages"`
+	Page          int               `json:"page"`
+	PageSize      int               `json:"pageSize"`
+}
+
+type Response struct {
+	Message string `json:"message"`
+	Data    any    `json:"data,omitempty"`
+}
+
+// ─── Custom Errors ─────────────────────────────────────────
+
+type NotFoundError struct {
+	ID int64
+}
+
+func (e *NotFoundError) Error() string {
+	return "product not found"
+}
+
+type ValidationError struct {
+	Code    string
+	Message string
+}
+
+func (e *ValidationError) Error() string {
+	return e.Message
+}
