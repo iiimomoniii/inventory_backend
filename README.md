@@ -55,6 +55,8 @@ go get github.com/golang-migrate/migrate/v4
 go get github.com/golang-migrate/migrate/v4/database/postgres
 go get github.com/golang-migrate/migrate/v4/source/file
 
+go get github.com/lib/pq
+
 # ตรวจสอบ go.mod และ go.sum
 go mod tidy
 ```

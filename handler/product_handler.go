@@ -2,6 +2,7 @@ package handler
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
@@ -143,6 +144,7 @@ func (h *ProductHandler) Delete(c *fiber.Ctx) error {
 // ─── Error Handler ─────────────────────────────────────────
 
 func handleError(c *fiber.Ctx, err error) error {
+	fmt.Printf("[handleError] %v\n", err) // ← เพิ่มบรรทัดนี้
 	var notFound *model.NotFoundError
 	if errors.As(err, &notFound) {
 		return utils.NotFound(c)

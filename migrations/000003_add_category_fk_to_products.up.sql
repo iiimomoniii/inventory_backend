@@ -1,5 +1,3 @@
--- 000002_create_categories_table.up.sql
-
 CREATE TABLE IF NOT EXISTS categories (
     id         BIGSERIAL    PRIMARY KEY,
     name       VARCHAR(100) NOT NULL UNIQUE,
@@ -8,12 +6,11 @@ CREATE TABLE IF NOT EXISTS categories (
     deleted_at TIMESTAMPTZ
 );
 
--- seed ข้อมูลเริ่มต้น
+CREATE INDEX IF NOT EXISTS idx_categories_deleted_at ON categories (deleted_at);
+
 INSERT INTO categories (name) VALUES
     ('Fruit'),
     ('Vegetable'),
     ('Dairy'),
     ('Meat')
 ON CONFLICT (name) DO NOTHING;
-
-CREATE INDEX IF NOT EXISTS idx_categories_deleted_at ON categories (deleted_at);

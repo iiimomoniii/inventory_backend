@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"database/sql"
 	"fmt"
 	"os"
 	"os/signal"
@@ -23,33 +24,43 @@ func Bootstrap() (App, *sync.WaitGroup) {
 		fmt.Println("Error loading config:", err)
 	}
 
-	// 2. รัน migration
+	// 2. รัน migration ด้วย connection แยก (ไม่ใช้ sqlDB ของ app)
 	if err := db.RunMigrations(cfg.Database); err != nil {
-		fmt.Printf("Migration warning: %v\n", err)
-		// ไม่ panic เพื่อให้ยังรันได้กับ in-memory repo
+		fmt.Printf("[bootstrap] Migration warning: %v\n", err)
 	}
 
-	// 3. สร้าง server
-	apiServer := NewAPIServer(cfg)
+	// 3. Connect database สำหรับ app
+	sqlDB, err := db.NewDatabase(cfg.Database)
+	if err != nil {
+		fmt.Printf("[bootstrap] ❌ DB connect failed: %v\n", err)
+	} else {
+		fmt.Println("[bootstrap] ✅ DB ready")
+	}
 
-	// 4. graceful shutdown
+	// 4. สร้าง server
+	apiServer := NewAPIServer(cfg, sqlDB)
+
+	// 5. graceful shutdown
 	var wg sync.WaitGroup
 	wg.Add(1)
-	addShutdownHook(&wg, func() {
+	addShutdownHook(&wg, sqlDB, func() {
 		apiServer.Stop()
 	})
 
 	return apiServer, &wg
 }
 
-func addShutdownHook(wg *sync.WaitGroup, f func()) {
+func addShutdownHook(wg *sync.WaitGroup, sqlDB *sql.DB, f func()) {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
-
 	go func() {
 		defer wg.Done()
 		<-c
 		fmt.Println("\nShutting down...")
 		f()
+		if sqlDB != nil {
+			sqlDB.Close()
+			fmt.Println("[bootstrap] DB closed")
+		}
 	}()
 }

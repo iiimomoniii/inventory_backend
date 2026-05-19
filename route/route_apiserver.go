@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"database/sql"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -11,48 +12,37 @@ import (
 	"github.com/iiimomoniii/inventory_backend/service"
 )
 
-// APIServer — implement App interface
 type APIServer struct {
 	server *fiber.App
 	cfg    config.AppConfig
 }
 
-// NewAPIServer — wire dependencies ทั้งหมด
-// Repository → Service → Handler (Layered Architecture)
-func NewAPIServer(cfg config.AppConfig) App {
+func NewAPIServer(cfg config.AppConfig, sqlDB *sql.DB) App {
 
-	// ─── Fiber App ─────────────────────────────────────────
 	app := fiber.New(fiber.Config{
-		AppName:        cfg.App.Name,                                            // ← cfg.App.Name
-		ReadTimeout:    time.Millisecond * time.Duration(cfg.Fiber.ReadTimeout), // ← จาก yaml
+		AppName:        cfg.App.Name,
+		ReadTimeout:    time.Millisecond * time.Duration(cfg.Fiber.ReadTimeout),
 		WriteTimeout:   time.Millisecond * time.Duration(cfg.Fiber.WriteTimeout),
 		IdleTimeout:    time.Millisecond * time.Duration(cfg.Fiber.IdleTimeout),
-		ReadBufferSize: cfg.Fiber.ReadBufferSize, // ← 8192
+		ReadBufferSize: cfg.Fiber.ReadBufferSize,
 		BodyLimit:      cfg.Fiber.BodyLimitSize,
 	})
 
-	// ─── Global Middleware ─────────────────────────────────
 	middleware.InitI18n()
 	app.Use(middleware.CorsMiddleware())
 
 	// ─── Repositories ──────────────────────────────────────
-	productRepo := repository.NewInMemoryProductRepository()
-
-	// ─── Services ──────────────────────────────────────────
+	productRepo := repository.NewPostgresProductRepository(sqlDB)
 	productSvc := service.NewProductService(productRepo)
-
-	// ─── Handlers ──────────────────────────────────────────
 	productHandler := handler.NewProductHandler(productSvc)
 
-	// ─── Routes ────────────────────────────────────────────
 	registerRoutes(app, productHandler)
 
 	return &APIServer{server: app, cfg: cfg}
 }
 
 func registerRoutes(app *fiber.App, productHandler *handler.ProductHandler) {
-
-	// ─── Public (no auth required) ─────────────────────────
+	// ─── Public ────────────────────────────────────────────
 	app.Get("/live", func(c *fiber.Ctx) error {
 		return c.SendString("OK")
 	})
@@ -62,24 +52,21 @@ func registerRoutes(app *fiber.App, productHandler *handler.ProductHandler) {
 	app.Use(middleware.I18nMiddleware)
 
 	// ─── Products ──────────────────────────────────────────
-	// ⚠️ specific routes ต้องอยู่ก่อน wildcard /:id เสมอ
-	app.Post("/products/search", productHandler.Search)
-	app.Post("/products/create/items", productHandler.CreateItems) // ← ย้ายขึ้นก่อน /:id
-	app.Get("/products/:id", productHandler.GetByID)
-	app.Post("/products", productHandler.Create)
-	app.Put("/products/:id", productHandler.Update)
-	app.Delete("/products/:id", productHandler.Delete)
-	app.Post("/products/create/items", productHandler.CreateItems)
+	v1 := app.Group("/v1")
+	v1.Post("/products/search", productHandler.Search)
+	v1.Post("/products/create/items", productHandler.CreateItems)
+	v1.Get("/products/:id", productHandler.GetByID)
+	v1.Post("/products", productHandler.Create)
+	v1.Put("/products/:id", productHandler.Update)
+	v1.Delete("/products/:id", productHandler.Delete)
 }
 
-// Start — implement App interface
 func (s *APIServer) Start() {
-	if err := s.server.Listen(s.cfg.Fiber.Address); err != nil { // ← cfg.Fiber.Address
+	if err := s.server.Listen(s.cfg.Fiber.Address); err != nil {
 		panic(err)
 	}
 }
 
-// Stop — implement App interface
 func (s *APIServer) Stop() {
 	if err := s.server.Shutdown(); err != nil {
 		panic(err)
