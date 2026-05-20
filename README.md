@@ -59,6 +59,8 @@ go get github.com/lib/pq
 
 go get golang.org/x/crypto/bcrypt
 
+go get github.com/gofiber/fiber/v2/middleware/limiter@v2.52.13
+
 # ตรวจสอบ go.mod และ go.sum
 go mod tidy
 ```

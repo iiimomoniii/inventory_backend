@@ -22,5 +22,11 @@
     "name": "UNAUTHORIZED",
     "messageEN": "Unauthorized",
     "messageTH": "ไม่มีสิทธิ์เข้าถึง"
+  },
+  "GLB005": {
+    "id": "GLB005",
+    "name": "TOO_MANY_REQUESTS",
+    "messageEN": "Too many requests",
+    "messageTH": "ส่งคำขอบ่อยเกินไป กรุณาลองใหม่ภายหลัง"
   }
 }

@@ -22,11 +22,13 @@ func NewAuthHandler(authService service.AuthService) *AuthHandler {
 // @Router /auth/token [post]
 func (h *AuthHandler) GenerateToken(c *fiber.Ctx) error {
 	var req model.TokenRequest
+
 	if err := c.BodyParser(&req); err != nil {
-		return utils.CustomErrorResp(fiber.StatusBadRequest, "GLB003", c)
+		return utils.InvalidBody(c)
 	}
+
 	if req.Username == "" || req.Password == "" {
-		return utils.CustomErrorResp(fiber.StatusBadRequest, "GLB003", c)
+		return utils.InvalidBody(c)
 	}
 
 	tokenResp, err := h.AuthService.Login(c.UserContext(), req.Username, req.Password)
@@ -35,7 +37,7 @@ func (h *AuthHandler) GenerateToken(c *fiber.Ctx) error {
 		if errors.As(err, &svcErr) {
 			return utils.CustomErrorResp(fiber.StatusUnauthorized, svcErr.Code, c)
 		}
-		return utils.CustomErrorResp(fiber.StatusInternalServerError, "GLB002", c)
+		return utils.InternalError(c)
 	}
 
 	return c.Status(fiber.StatusOK).JSON(model.Response{
@@ -50,11 +52,13 @@ func (h *AuthHandler) GenerateToken(c *fiber.Ctx) error {
 // @Router /auth/refresh [post]
 func (h *AuthHandler) RefreshToken(c *fiber.Ctx) error {
 	var req model.RefreshTokenRequest
+
 	if err := c.BodyParser(&req); err != nil {
-		return utils.CustomErrorResp(fiber.StatusBadRequest, "GLB003", c)
+		return utils.InvalidBody(c)
 	}
+
 	if req.RefreshToken == "" {
-		return utils.CustomErrorResp(fiber.StatusBadRequest, "GLB003", c)
+		return utils.InvalidBody(c)
 	}
 
 	tokenResp, err := h.AuthService.Refresh(c.UserContext(), req.RefreshToken)
@@ -63,7 +67,7 @@ func (h *AuthHandler) RefreshToken(c *fiber.Ctx) error {
 		if errors.As(err, &svcErr) {
 			return utils.CustomErrorResp(fiber.StatusUnauthorized, svcErr.Code, c)
 		}
-		return utils.CustomErrorResp(fiber.StatusInternalServerError, "GLB002", c)
+		return utils.InternalError(c)
 	}
 
 	return c.Status(fiber.StatusOK).JSON(model.Response{
@@ -78,11 +82,13 @@ func (h *AuthHandler) RefreshToken(c *fiber.Ctx) error {
 // @Router /auth/logout [post]
 func (h *AuthHandler) Logout(c *fiber.Ctx) error {
 	var req model.RefreshTokenRequest
+
 	if err := c.BodyParser(&req); err != nil {
-		return utils.CustomErrorResp(fiber.StatusBadRequest, "GLB003", c)
+		return utils.InvalidBody(c)
 	}
+
 	if req.RefreshToken == "" {
-		return utils.CustomErrorResp(fiber.StatusBadRequest, "GLB003", c)
+		return utils.InvalidBody(c)
 	}
 
 	if err := h.AuthService.Logout(c.UserContext(), req.RefreshToken); err != nil {
@@ -90,7 +96,7 @@ func (h *AuthHandler) Logout(c *fiber.Ctx) error {
 		if errors.As(err, &svcErr) {
 			return utils.CustomErrorResp(fiber.StatusUnauthorized, svcErr.Code, c)
 		}
-		return utils.CustomErrorResp(fiber.StatusInternalServerError, "GLB002", c)
+		return utils.InternalError(c)
 	}
 
 	return c.Status(fiber.StatusOK).JSON(model.Response{

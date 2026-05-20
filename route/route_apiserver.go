@@ -5,11 +5,13 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/iiimomoniii/inventory_backend/config"
 	"github.com/iiimomoniii/inventory_backend/handler"
 	"github.com/iiimomoniii/inventory_backend/middleware"
 	"github.com/iiimomoniii/inventory_backend/repository"
 	"github.com/iiimomoniii/inventory_backend/service"
+	"github.com/iiimomoniii/inventory_backend/utils"
 )
 
 type APIServer struct {
@@ -64,35 +66,38 @@ func registerRoutes(
 	app.Get("/live", func(c *fiber.Ctx) error {
 		return c.SendString("OK")
 	})
-	app.Post("/auth/token", authHandler.GenerateToken)
+
+	app.Post("/auth/token",
+		limiter.New(limiter.Config{
+			Max:        5,
+			Expiration: 1 * time.Minute,
+			LimitReached: func(c *fiber.Ctx) error {
+				return utils.TooManyRequests(c)
+			},
+		}),
+		authHandler.GenerateToken,
+	)
+
 	app.Post("/auth/refresh", authHandler.RefreshToken)
 	app.Post("/auth/logout", authHandler.Logout)
 
+	// Public create user
 	app.Post("/v1/users/create", userHandler.Create)
 
-	// ─── Auth middleware ────────────────────────────────────
-	app.Use(middleware.AuthMiddleware())
-	app.Use(middleware.I18nMiddleware)
+	// ─── Protected Routes ──────────────────────────────────
+	protected := app.Group("/v1", middleware.AuthMiddleware(), middleware.I18nMiddleware)
 
-	v1 := app.Group("/v1")
+	// Categories
+	protected.Get("/categories", categoryHandler.GetAll)
+	protected.Get("/categories/:id", categoryHandler.GetByID)
 
-	// public
-	v1.Post("/users/create", userHandler.Create)
-
-	// auth
-	app.Use(middleware.AuthMiddleware())
-
-	private := app.Group("/v1")
-
-	private.Get("/categories", categoryHandler.GetAll)
-	private.Get("/categories/:id", categoryHandler.GetByID)
-
-	private.Post("/products/search", productHandler.Search)
-	private.Post("/products/create/items", productHandler.CreateItems)
-	private.Post("/products/create", productHandler.Create)
-	private.Get("/products/:id", productHandler.GetByID)
-	private.Put("/products/update/:id", productHandler.Update)
-	private.Delete("/products/delete/:id", productHandler.Delete)
+	// Products
+	protected.Post("/products/search", productHandler.Search)
+	protected.Post("/products/create/items", productHandler.CreateItems)
+	protected.Post("/products/create", productHandler.Create)
+	protected.Get("/products/:id", productHandler.GetByID)
+	protected.Put("/products/update/:id", productHandler.Update)
+	protected.Delete("/products/delete/:id", productHandler.Delete)
 }
 
 func (s *APIServer) Start() {

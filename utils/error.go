@@ -156,3 +156,7 @@ func Unauthorized(c *fiber.Ctx) error { return CustomErrorResp(fiber.StatusUnaut
 func BadRequest(c *fiber.Ctx, code string) error {
 	return CustomErrorResp(fiber.StatusBadRequest, code, c)
 }
+
+func TooManyRequests(c *fiber.Ctx) error {
+	return CustomErrorResp(fiber.StatusTooManyRequests, "GLB005", c)
+}
