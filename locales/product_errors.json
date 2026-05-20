@@ -52,5 +52,11 @@
     "name": "PARTIAL_FAILED",
     "messageEN": "Some items failed to process",
     "messageTH": "บางรายการดำเนินการไม่สำเร็จ"
+  },
+  "PRD010": {
+    "id": "PRD010",
+    "name": "PRODUCT_ALREADY_EXISTS",
+    "messageEN": "Product already exists",
+    "messageTH": "มีสินค้านี้อยู่ในระบบแล้ว"
   }
 }

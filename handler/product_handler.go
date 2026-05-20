@@ -64,10 +64,17 @@ func (h *ProductHandler) Create(c *fiber.Ctx) error {
 	if err := utils.StrictUnmarshal(c.Body(), &req); err != nil {
 		return utils.InvalidBody(c)
 	}
+
 	product, err := h.Service.Create(c.UserContext(), req, getUserID(c))
 	if err != nil {
+		var serviceErr *service.ServiceError
+		if errors.As(err, &serviceErr) && serviceErr.Code == "PRD010" {
+			return utils.Conflict(c, serviceErr.Code)
+		}
+
 		return handleError(c, err)
 	}
+
 	return c.Status(fiber.StatusCreated).JSON(model.Response{
 		Status:  fiber.StatusCreated,
 		Message: "created",
@@ -145,18 +152,4 @@ func (h *ProductHandler) Delete(c *fiber.Ctx) error {
 		return handleError(c, err)
 	}
 	return c.JSON(model.Response{Status: fiber.StatusOK, Message: "deleted"})
-}
-
-// ─── Error Handler ─────────────────────────────────────────
-
-func handleError(c *fiber.Ctx, err error) error {
-	var notFound *model.NotFoundError
-	if errors.As(err, &notFound) {
-		return utils.NotFound(c)
-	}
-	var valErr *model.ValidationError
-	if errors.As(err, &valErr) {
-		return utils.BadRequest(c, valErr.Code)
-	}
-	return utils.InternalError(c)
 }

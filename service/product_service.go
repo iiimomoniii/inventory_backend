@@ -85,8 +85,13 @@ func (s *ProductServiceImpl) Create(ctx context.Context, req model.ProductCreate
 
 	product, err := s.Repo.Create(ctx, req, createdBy)
 	if err != nil {
+		if strings.Contains(err.Error(), "product name already exists") {
+			return nil, &ServiceError{Code: "PRD010"}
+		}
+
 		return nil, fmt.Errorf("create product failed: %w", err)
 	}
+
 	return product, nil
 }
 

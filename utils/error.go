@@ -160,3 +160,6 @@ func BadRequest(c *fiber.Ctx, code string) error {
 func TooManyRequests(c *fiber.Ctx) error {
 	return CustomErrorResp(fiber.StatusTooManyRequests, "GLB005", c)
 }
+func Conflict(c *fiber.Ctx, code string) error {
+	return CustomErrorResp(fiber.StatusConflict, code, c)
+}

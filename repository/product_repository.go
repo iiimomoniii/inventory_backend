@@ -91,6 +91,7 @@ func (r *ProductRepositoryImpl) Search(ctx context.Context, req model.ProductSea
 	var total int
 	countCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
+
 	if err := r.DB.QueryRowContext(countCtx,
 		"SELECT COUNT(*) FROM products p "+where, params...,
 	).Scan(&total); err != nil {
@@ -137,11 +138,26 @@ func (r *ProductRepositoryImpl) Create(ctx context.Context, req model.ProductCre
 	if err != nil {
 		return nil, fmt.Errorf("begin tx failed: %w", err)
 	}
-	defer func() {
-		if err != nil {
-			tx.Rollback()
-		}
-	}()
+	defer tx.Rollback()
+
+	var exists bool
+	err = tx.QueryRowContext(ctx, `
+		SELECT EXISTS (
+			SELECT 1
+			FROM products
+			WHERE LOWER(name) = LOWER($1)
+			AND category_id = $2
+			AND deleted_at IS NULL
+		)
+	`, req.Name, req.CategoryID).Scan(&exists)
+
+	if err != nil {
+		return nil, fmt.Errorf("check duplicate failed: %w", err)
+	}
+
+	if exists {
+		return nil, fmt.Errorf("product name already exists")
+	}
 
 	var id int64
 	err = tx.QueryRowContext(ctx, `
@@ -150,6 +166,7 @@ func (r *ProductRepositoryImpl) Create(ctx context.Context, req model.ProductCre
 		RETURNING id`,
 		req.Name, req.CategoryID, req.Price, req.Stock, createdBy,
 	).Scan(&id)
+
 	if err != nil {
 		return nil, fmt.Errorf("insert failed: %w", err)
 	}
