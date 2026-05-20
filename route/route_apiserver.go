@@ -31,27 +31,39 @@ func NewAPIServer(cfg config.AppConfig, sqlDB *sql.DB) App {
 	middleware.InitI18n()
 	app.Use(middleware.CorsMiddleware())
 
-	// ─── Repositories ──────────────────────────────────────
+	// ─── Repositories ──────────────────────────────────────────
 	productRepo := repository.NewPostgresProductRepository(sqlDB)
-	productSvc := service.NewProductService(productRepo)
-	productHandler := handler.NewProductHandler(productSvc)
+	userRepo := repository.NewUserRepository(sqlDB) // ← เพิ่ม
 
-	registerRoutes(app, productHandler)
+	// ─── Services ──────────────────────────────────────────────
+	productSvc := service.NewProductService(productRepo)
+	authSvc := service.NewAuthService(userRepo, cfg.JWT.Secret, cfg.JWT.ExpiresIn) // ← เพิ่ม
+
+	// ─── Handlers ──────────────────────────────────────────────
+	productHandler := handler.NewProductHandler(productSvc)
+	authHandler := handler.NewAuthHandler(authSvc) // ← เปลี่ยนจาก cfg.JWT.Secret
+
+	// ─── Routes ────────────────────────────────────────────
+	registerRoutes(app, productHandler, authHandler)
 
 	return &APIServer{server: app, cfg: cfg}
 }
 
-func registerRoutes(app *fiber.App, productHandler *handler.ProductHandler) {
-	// ─── Public ────────────────────────────────────────────
+func registerRoutes(app *fiber.App, productHandler *handler.ProductHandler, authHandler *handler.AuthHandler) {
+
+	// ─── Public (no auth required) ─────────────────────────
 	app.Get("/live", func(c *fiber.Ctx) error {
 		return c.SendString("OK")
 	})
+
+	// ─── Auth ──────────────────────────────────────────────
+	app.Post("/auth/token", authHandler.GenerateToken)
 
 	// ─── Auth middleware ────────────────────────────────────
 	app.Use(middleware.AuthMiddleware())
 	app.Use(middleware.I18nMiddleware)
 
-	// ─── Products ──────────────────────────────────────────
+	// ─── Products v1 ───────────────────────────────────────
 	v1 := app.Group("/v1")
 	v1.Post("/products/search", productHandler.Search)
 	v1.Post("/products/create/items", productHandler.CreateItems)

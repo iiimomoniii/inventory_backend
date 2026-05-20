@@ -3,6 +3,8 @@ package config
 import (
 	"bytes"
 	_ "embed"
+	"fmt"
+	"os"
 	"strings"
 
 	"github.com/spf13/viper"
@@ -18,6 +20,7 @@ type AppConfig struct {
 	App      AppInfo        `mapstructure:"app"`
 	Fiber    FiberConfig    `mapstructure:"fiber"`
 	Database DatabaseConfig `mapstructure:"database"`
+	JWT      JWTConfig      `mapstructure:"jwt"`
 }
 
 type AppInfo struct {
@@ -43,15 +46,23 @@ type DatabaseConfig struct {
 	SSLMode  string `mapstructure:"sslmode"`
 }
 
+type JWTConfig struct {
+	Secret    string `mapstructure:"secret"`
+	ExpiresIn int    `mapstructure:"expiresIn"`
+}
+
 // ─── Loader ────────────────────────────────────────────────
 
 func LoadConfig() (AppConfig, error) {
-	gotenv.Load()
+	// โหลด .env ตาม APP_ENV
+	env := os.Getenv("APP_ENV")
+	envFile := loadEnvFile(env)
 
 	viper.SetConfigType("yaml")
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "__", "-", "_"))
 
+	// โหลด config.yaml ก่อน
 	if err := viper.ReadConfig(bytes.NewBuffer(configFile)); err != nil {
 		return AppConfig{}, err
 	}
@@ -61,8 +72,35 @@ func LoadConfig() (AppConfig, error) {
 		return AppConfig{}, err
 	}
 
+	// Override ด้วย .env
 	overrideWithEnv(&cfg)
+
+	fmt.Printf("[config] env=%s file=%s db=%s:%d/%s\n",
+		env, envFile, cfg.Database.Host, cfg.Database.Port, cfg.Database.DBName)
+
 	return cfg, nil
+}
+
+// loadEnvFile — โหลด .env file ตาม environment
+func loadEnvFile(env string) string {
+	envFiles := map[string]string{
+		"dev":  ".env.dev",
+		"qa":   ".env.qa",
+		"uat":  ".env.uat",
+		"prod": ".env.prod",
+	}
+
+	file, ok := envFiles[env]
+	if !ok {
+		file = ".env.dev" // default
+	}
+
+	if err := gotenv.Load(file); err != nil {
+		fmt.Printf("[config] warning: %s not found, using default\n", file)
+		gotenv.Load(".env.dev") // fallback
+	}
+
+	return file
 }
 
 func overrideWithEnv(cfg *AppConfig) {
@@ -112,5 +150,13 @@ func overrideWithEnv(cfg *AppConfig) {
 	}
 	if v := viper.GetString("DATABASE__SSLMODE"); v != "" {
 		cfg.Database.SSLMode = v
+	}
+
+	// ─── JWT ───────────────────────────────────────────────
+	if v := viper.GetString("JWT__SECRET"); v != "" {
+		cfg.JWT.Secret = v
+	}
+	if v := viper.GetInt("JWT__EXPIRES_IN"); v != 0 {
+		cfg.JWT.ExpiresIn = v
 	}
 }

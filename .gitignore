@@ -1,3 +1,15 @@
-.env
-postgres_data/
+
+Copy
+
+# Binaries
 __debug_bin*
+ 
+# Environment files (contains secrets)
+.env.dev
+.env.qa
+.env.uat
+.env.prod
+ 
+# Keep example
+!.env.example
+ 
