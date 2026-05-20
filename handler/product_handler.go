@@ -2,7 +2,6 @@ package handler
 
 import (
 	"errors"
-	"fmt"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
@@ -19,9 +18,17 @@ func NewProductHandler(svc service.ProductService) *ProductHandler {
 	return &ProductHandler{Service: svc}
 }
 
+// getUserID — ดึง username จาก JWT locals ใช้เป็น created_by / updated_by
+func getUserID(c *fiber.Ctx) string {
+	if userID, ok := c.Locals("userID").(string); ok && userID != "" {
+		return userID
+	}
+	return "anonymous"
+}
+
 // Search godoc
 // @Summary Search products
-// @Router /products/search [post]
+// @Router /v1/products/search [post]
 func (h *ProductHandler) Search(c *fiber.Ctx) error {
 	var req model.ProductSearchRequest
 	if err := c.BodyParser(&req); err != nil {
@@ -36,7 +43,7 @@ func (h *ProductHandler) Search(c *fiber.Ctx) error {
 
 // GetByID godoc
 // @Summary Get product by ID
-// @Router /products/:id [get]
+// @Router /v1/products/:id [get]
 func (h *ProductHandler) GetByID(c *fiber.Ctx) error {
 	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
 	if err != nil {
@@ -49,18 +56,15 @@ func (h *ProductHandler) GetByID(c *fiber.Ctx) error {
 	return c.JSON(model.Response{Status: fiber.StatusOK, Message: "success", Data: product})
 }
 
-// Create godoc — Single
+// Create godoc
 // @Summary Create product (single)
-// @Router /products [post]
+// @Router /v1/products/create [post]
 func (h *ProductHandler) Create(c *fiber.Ctx) error {
 	var req model.ProductCreateRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := utils.StrictUnmarshal(c.Body(), &req); err != nil {
 		return utils.InvalidBody(c)
 	}
-
-	userID := c.Get("X-User-ID", "anonymous")
-
-	product, err := h.Service.Create(c.UserContext(), req, userID)
+	product, err := h.Service.Create(c.UserContext(), req, getUserID(c))
 	if err != nil {
 		return handleError(c, err)
 	}
@@ -71,9 +75,9 @@ func (h *ProductHandler) Create(c *fiber.Ctx) error {
 	})
 }
 
-// ItemsCreate godoc — Items
-// @Summary Create products (Items) — error ของใครของมัน
-// @Router /products/Items [post]
+// CreateItems godoc
+// @Summary Create products (bulk)
+// @Router /v1/products/create/items [post]
 func (h *ProductHandler) CreateItems(c *fiber.Ctx) error {
 	var items []model.ProductCreateRequest
 	if err := c.BodyParser(&items); err != nil {
@@ -83,44 +87,46 @@ func (h *ProductHandler) CreateItems(c *fiber.Ctx) error {
 		return utils.InvalidBody(c)
 	}
 
-	userID := c.Get("X-User-ID", "anonymous")
+	// validate แต่ละ item ว่าเป็น camelCase
+	for i := range items {
+		if err := utils.StrictJSONKeys(c.Body(), model.ProductCreateRequest{}); err != nil {
+			return utils.InvalidBody(c)
+		}
+		_ = i
+	}
+
+	userID := getUserID(c)
 	results := make([]model.ItemResult, 0, len(items))
 
 	for i, req := range items {
-		// ลอง create แต่ละรายการ ไม่หยุดเมื่อ error
 		product, err := h.Service.Create(c.UserContext(), req, userID)
 		if err != nil {
 			var valErr *model.ValidationError
 			if errors.As(err, &valErr) {
-				// error ของ item นี้ → บันทึก แล้วทำต่อ
 				results = append(results, utils.BuildErrorItem(i, valErr.Code))
 				continue
 			}
 			results = append(results, utils.BuildErrorItem(i, "GLB002"))
 			continue
 		}
-		// สำเร็จ
 		results = append(results, utils.BuildSuccessItem(i, product))
 	}
-
-	// ส่ง Items response — แสดง error ของใครของมัน
 	return utils.ItemsResponse(c, results)
 }
 
 // Update godoc
 // @Summary Update product
-// @Router /products/:id [put]
+// @Router /v1/products/update/:id [put]
 func (h *ProductHandler) Update(c *fiber.Ctx) error {
 	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
 	if err != nil {
 		return utils.BadRequest(c, "PRD005")
 	}
 	var req model.ProductUpdateRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := utils.StrictUnmarshal(c.Body(), &req); err != nil {
 		return utils.InvalidBody(c)
 	}
-	userID := c.Get("X-User-ID", "anonymous")
-	product, err := h.Service.Update(c.UserContext(), id, req, userID)
+	product, err := h.Service.Update(c.UserContext(), id, req, getUserID(c))
 	if err != nil {
 		return handleError(c, err)
 	}
@@ -129,7 +135,7 @@ func (h *ProductHandler) Update(c *fiber.Ctx) error {
 
 // Delete godoc
 // @Summary Delete product
-// @Router /products/:id [delete]
+// @Router /v1/products/delete/:id [delete]
 func (h *ProductHandler) Delete(c *fiber.Ctx) error {
 	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
 	if err != nil {
@@ -144,7 +150,6 @@ func (h *ProductHandler) Delete(c *fiber.Ctx) error {
 // ─── Error Handler ─────────────────────────────────────────
 
 func handleError(c *fiber.Ctx, err error) error {
-	fmt.Printf("[handleError] %v\n", err) // ← เพิ่มบรรทัดนี้
 	var notFound *model.NotFoundError
 	if errors.As(err, &notFound) {
 		return utils.NotFound(c)

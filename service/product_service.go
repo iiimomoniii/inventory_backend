@@ -63,7 +63,6 @@ func (s *ProductServiceImpl) Search(ctx context.Context, req model.ProductSearch
 }
 
 func (s *ProductServiceImpl) GetByID(ctx context.Context, id int64) (*model.ProductResponse, error) {
-	// Priority 1 — id
 	if id <= 0 {
 		return nil, &model.ValidationError{Code: "PRD005"}
 	}

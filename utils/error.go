@@ -65,9 +65,16 @@ func GetName(code string) string {
 	return entry.Name
 }
 
-// ─── Single Error Response ─────────────────────────────────
+// ─── Error Response ────────────────────────────────────────
 
+// ErrorResponse — สร้าง error response จาก locale store
 func ErrorResponse(c *fiber.Ctx, status int, code string) error {
+	return CustomErrorResp(status, code, c)
+}
+
+// CustomErrorResp — ใช้ได้ทั้ง GLB, PRD หรือ code อื่นๆ
+// ดึง messageEN, messageTH, name จาก locale อัตโนมัติ
+func CustomErrorResp(status int, code string, c *fiber.Ctx) error {
 	messageEN := GetMessage(code, "en")
 	messageTH := GetMessage(code, "th")
 	name := GetName(code)
@@ -138,17 +145,14 @@ func BuildErrorItem(index int, code string) model.ItemResult {
 	}
 }
 
-// ─── Global Errors (GLB) ───────────────────────────────────
+// ─── Shortcuts ─────────────────────────────────────────────
 
-func NotFound(c *fiber.Ctx) error { return ErrorResponse(c, fiber.StatusNotFound, "GLB001") }
+func NotFound(c *fiber.Ctx) error { return CustomErrorResp(fiber.StatusNotFound, "GLB001", c) }
 func InternalError(c *fiber.Ctx) error {
-	return ErrorResponse(c, fiber.StatusInternalServerError, "GLB002")
+	return CustomErrorResp(fiber.StatusInternalServerError, "GLB002", c)
 }
-func InvalidBody(c *fiber.Ctx) error  { return ErrorResponse(c, fiber.StatusBadRequest, "GLB003") }
-func Unauthorized(c *fiber.Ctx) error { return ErrorResponse(c, fiber.StatusUnauthorized, "GLB004") }
-
-// ─── Product Errors (PRD) ──────────────────────────────────
-
+func InvalidBody(c *fiber.Ctx) error  { return CustomErrorResp(fiber.StatusBadRequest, "GLB003", c) }
+func Unauthorized(c *fiber.Ctx) error { return CustomErrorResp(fiber.StatusUnauthorized, "GLB004", c) }
 func BadRequest(c *fiber.Ctx, code string) error {
-	return ErrorResponse(c, fiber.StatusBadRequest, code)
+	return CustomErrorResp(fiber.StatusBadRequest, code, c)
 }

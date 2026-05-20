@@ -11,13 +11,7 @@ import (
 	"github.com/iiimomoniii/inventory_backend/model"
 )
 
-type PostgresProductRepository struct {
-	DB *sql.DB
-}
-
-func NewPostgresProductRepository(db *sql.DB) *PostgresProductRepository {
-	return &PostgresProductRepository{DB: db}
-}
+// ─── Interface ─────────────────────────────────────────────
 
 type ProductRepository interface {
 	Search(ctx context.Context, req model.ProductSearchRequest) ([]model.ProductResponse, int, error)
@@ -27,9 +21,38 @@ type ProductRepository interface {
 	Delete(ctx context.Context, id int64) error
 }
 
-// ─── Search ────────────────────────────────────────────────
+// ─── Implementation ────────────────────────────────────────
 
-func (r *PostgresProductRepository) Search(ctx context.Context, req model.ProductSearchRequest) ([]model.ProductResponse, int, error) {
+type ProductRepositoryImpl struct {
+	DB *sql.DB
+}
+
+func NewProductRepository(db *sql.DB) *ProductRepositoryImpl {
+	return &ProductRepositoryImpl{DB: db}
+}
+
+// baseSelect — SELECT + JOIN ที่ใช้ซ้ำ รวม created_by, updated_by
+const baseSelect = `
+	SELECT p.id, p.name, p.category_id, c.name AS category_name,
+	       p.price, p.stock,
+	       COALESCE(p.created_by, ''), COALESCE(p.updated_by, ''),
+	       p.created_at, p.updated_at
+	FROM products p
+	JOIN categories c ON c.id = p.category_id`
+
+// scanProduct — scan row เป็น ProductResponse
+func scanProduct(row interface{ Scan(...any) error }) (model.ProductResponse, error) {
+	var p model.ProductResponse
+	err := row.Scan(
+		&p.ID, &p.Name, &p.CategoryID, &p.CategoryName,
+		&p.Price, &p.Stock,
+		&p.CreatedBy, &p.UpdatedBy,
+		&p.CreatedAt, &p.UpdatedAt,
+	)
+	return p, err
+}
+
+func (r *ProductRepositoryImpl) Search(ctx context.Context, req model.ProductSearchRequest) ([]model.ProductResponse, int, error) {
 	page := req.Page
 	pageSize := req.PageSize
 	if page < 0 {
@@ -65,29 +88,21 @@ func (r *PostgresProductRepository) Search(ctx context.Context, req model.Produc
 		n++
 	}
 
-	// ─── Count ─────────────────────────────────────────────
 	var total int
-	countQuery := "SELECT COUNT(*) FROM products p " + where
 	countCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	if err := r.DB.QueryRowContext(countCtx, countQuery, params...).Scan(&total); err != nil {
+	if err := r.DB.QueryRowContext(countCtx,
+		"SELECT COUNT(*) FROM products p "+where, params...,
+	).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count query failed: %w", err)
 	}
 
-	// ─── Main query — JOIN categories ──────────────────────
-	mainQuery := fmt.Sprintf(`
-		SELECT p.id, p.name, p.category_id, c.name AS category_name,
-		       p.price, p.stock, p.created_at, p.updated_at
-		FROM products p
-		JOIN categories c ON c.id = p.category_id
-		%s
-		ORDER BY p.created_at DESC
-		LIMIT $%d OFFSET $%d`,
-		where, n, n+1,
+	query := fmt.Sprintf("%s %s ORDER BY p.created_at DESC LIMIT $%d OFFSET $%d",
+		baseSelect, where, n, n+1,
 	)
 	params = append(params, pageSize, offset)
 
-	rows, err := r.DB.QueryContext(ctx, mainQuery, params...)
+	rows, err := r.DB.QueryContext(ctx, query, params...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("search query failed: %w", err)
 	}
@@ -95,37 +110,19 @@ func (r *PostgresProductRepository) Search(ctx context.Context, req model.Produc
 
 	var products []model.ProductResponse
 	for rows.Next() {
-		var p model.ProductResponse
-		if err := rows.Scan(
-			&p.ID, &p.Name, &p.CategoryID, &p.CategoryName,
-			&p.Price, &p.Stock, &p.CreatedAt, &p.UpdatedAt,
-		); err != nil {
+		p, err := scanProduct(rows)
+		if err != nil {
 			return nil, 0, fmt.Errorf("scan failed: %w", err)
 		}
 		products = append(products, p)
 	}
-	if err := rows.Err(); err != nil {
-		return nil, 0, fmt.Errorf("rows error: %w", err)
-	}
-
 	return products, total, nil
 }
 
-// ─── FindByID ──────────────────────────────────────────────
+func (r *ProductRepositoryImpl) FindByID(ctx context.Context, id int64) (*model.ProductResponse, error) {
+	query := baseSelect + " WHERE p.id = $1 AND p.deleted_at IS NULL"
 
-func (r *PostgresProductRepository) FindByID(ctx context.Context, id int64) (*model.ProductResponse, error) {
-	query := `
-		SELECT p.id, p.name, p.category_id, c.name AS category_name,
-		       p.price, p.stock, p.created_at, p.updated_at
-		FROM products p
-		JOIN categories c ON c.id = p.category_id
-		WHERE p.id = $1 AND p.deleted_at IS NULL`
-
-	var p model.ProductResponse
-	err := r.DB.QueryRowContext(ctx, query, id).Scan(
-		&p.ID, &p.Name, &p.CategoryID, &p.CategoryName,
-		&p.Price, &p.Stock, &p.CreatedAt, &p.UpdatedAt,
-	)
+	p, err := scanProduct(r.DB.QueryRowContext(ctx, query, id))
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, &model.NotFoundError{ID: id}
@@ -135,9 +132,7 @@ func (r *PostgresProductRepository) FindByID(ctx context.Context, id int64) (*mo
 	return &p, nil
 }
 
-// ─── Create ────────────────────────────────────────────────
-
-func (r *PostgresProductRepository) Create(ctx context.Context, req model.ProductCreateRequest, createdBy string) (*model.ProductResponse, error) {
+func (r *ProductRepositoryImpl) Create(ctx context.Context, req model.ProductCreateRequest, createdBy string) (*model.ProductResponse, error) {
 	tx, err := r.DB.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("begin tx failed: %w", err)
@@ -148,13 +143,11 @@ func (r *PostgresProductRepository) Create(ctx context.Context, req model.Produc
 		}
 	}()
 
-	insertQuery := `
+	var id int64
+	err = tx.QueryRowContext(ctx, `
 		INSERT INTO products (name, category_id, price, stock, created_by, updated_by)
 		VALUES ($1, $2, $3, $4, $5, $5)
-		RETURNING id`
-
-	var id int64
-	err = tx.QueryRowContext(ctx, insertQuery,
+		RETURNING id`,
 		req.Name, req.CategoryID, req.Price, req.Stock, createdBy,
 	).Scan(&id)
 	if err != nil {
@@ -165,13 +158,10 @@ func (r *PostgresProductRepository) Create(ctx context.Context, req model.Produc
 		return nil, fmt.Errorf("commit failed: %w", err)
 	}
 
-	// ดึง product พร้อม category_name
 	return r.FindByID(ctx, id)
 }
 
-// ─── Update ────────────────────────────────────────────────
-
-func (r *PostgresProductRepository) Update(ctx context.Context, id int64, req model.ProductUpdateRequest, updatedBy string) (*model.ProductResponse, error) {
+func (r *ProductRepositoryImpl) Update(ctx context.Context, id int64, req model.ProductUpdateRequest, updatedBy string) (*model.ProductResponse, error) {
 	tx, err := r.DB.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("begin tx failed: %w", err)
@@ -198,19 +188,16 @@ func (r *PostgresProductRepository) Update(ctx context.Context, id int64, req mo
 	}
 
 	params = append(params, id)
-	updateQuery := fmt.Sprintf(`
-		UPDATE products SET %s
-		WHERE id = $%d AND deleted_at IS NULL`,
+	result, err := tx.ExecContext(ctx, fmt.Sprintf(`
+		UPDATE products SET %s WHERE id = $%d AND deleted_at IS NULL`,
 		strings.Join(setClauses, ", "), n,
-	)
-
-	result, err := tx.ExecContext(ctx, updateQuery, params...)
+	), params...)
 	if err != nil {
 		return nil, fmt.Errorf("update failed: %w", err)
 	}
 
-	rows, _ := result.RowsAffected()
-	if rows == 0 {
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
 		tx.Rollback()
 		return nil, &model.NotFoundError{ID: id}
 	}
@@ -219,13 +206,10 @@ func (r *PostgresProductRepository) Update(ctx context.Context, id int64, req mo
 		return nil, fmt.Errorf("commit failed: %w", err)
 	}
 
-	// ดึง product พร้อม category_name
 	return r.FindByID(ctx, id)
 }
 
-// ─── Delete ────────────────────────────────────────────────
-
-func (r *PostgresProductRepository) Delete(ctx context.Context, id int64) error {
+func (r *ProductRepositoryImpl) Delete(ctx context.Context, id int64) error {
 	result, err := r.DB.ExecContext(ctx,
 		"UPDATE products SET deleted_at = NOW() WHERE id = $1 AND deleted_at IS NULL", id,
 	)

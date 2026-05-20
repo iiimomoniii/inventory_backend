@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/iiimomoniii/inventory_backend/model"
+	"github.com/iiimomoniii/inventory_backend/repository"
 )
 
 // ─── Mock Repository ───────────────────────────────────────
@@ -52,7 +53,8 @@ func (m *mockProductRepository) Delete(_ context.Context, id int64) error {
 
 // ─── Helpers ───────────────────────────────────────────────
 
-func newSvc(mock *mockProductRepository) *ProductServiceImpl {
+// ใช้ repository.ProductRepository interface แทน *mockProductRepository
+func newSvc(mock repository.ProductRepository) *ProductServiceImpl {
 	return &ProductServiceImpl{Repo: mock}
 }
 

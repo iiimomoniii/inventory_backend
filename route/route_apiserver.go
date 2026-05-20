@@ -32,7 +32,7 @@ func NewAPIServer(cfg config.AppConfig, sqlDB *sql.DB) App {
 	app.Use(middleware.CorsMiddleware())
 
 	// ─── Repositories ──────────────────────────────────────
-	productRepo := repository.NewPostgresProductRepository(sqlDB)
+	productRepo := repository.NewProductRepository(sqlDB)
 	categoryRepo := repository.NewCategoryRepository(sqlDB)
 	userRepo := repository.NewUserRepository(sqlDB)
 
