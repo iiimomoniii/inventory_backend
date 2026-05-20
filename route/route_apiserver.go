@@ -31,46 +31,51 @@ func NewAPIServer(cfg config.AppConfig, sqlDB *sql.DB) App {
 	middleware.InitI18n()
 	app.Use(middleware.CorsMiddleware())
 
-	// ─── Repositories ──────────────────────────────────────────
+	// ─── Repositories ──────────────────────────────────────
 	productRepo := repository.NewPostgresProductRepository(sqlDB)
-	userRepo := repository.NewUserRepository(sqlDB) // ← เพิ่ม
+	categoryRepo := repository.NewCategoryRepository(sqlDB)
+	userRepo := repository.NewUserRepository(sqlDB)
 
-	// ─── Services ──────────────────────────────────────────────
+	// ─── Services ──────────────────────────────────────────
 	productSvc := service.NewProductService(productRepo)
-	authSvc := service.NewAuthService(userRepo, cfg.JWT.Secret, cfg.JWT.ExpiresIn) // ← เพิ่ม
+	authSvc := service.NewAuthService(userRepo, cfg.JWT.Secret, cfg.JWT.ExpiresIn)
 
-	// ─── Handlers ──────────────────────────────────────────────
+	// ─── Handlers ──────────────────────────────────────────
 	productHandler := handler.NewProductHandler(productSvc)
-	authHandler := handler.NewAuthHandler(authSvc) // ← เปลี่ยนจาก cfg.JWT.Secret
+	categoryHandler := handler.NewCategoryHandler(categoryRepo)
+	authHandler := handler.NewAuthHandler(authSvc)
 
-	// ─── Routes ────────────────────────────────────────────
-	registerRoutes(app, productHandler, authHandler)
+	registerRoutes(app, productHandler, categoryHandler, authHandler)
 
 	return &APIServer{server: app, cfg: cfg}
 }
 
-func registerRoutes(app *fiber.App, productHandler *handler.ProductHandler, authHandler *handler.AuthHandler) {
+func registerRoutes(app *fiber.App, productHandler *handler.ProductHandler, categoryHandler *handler.CategoryHandler, authHandler *handler.AuthHandler) {
 
-	// ─── Public (no auth required) ─────────────────────────
+	// ─── Public ────────────────────────────────────────────
 	app.Get("/live", func(c *fiber.Ctx) error {
 		return c.SendString("OK")
 	})
-
-	// ─── Auth ──────────────────────────────────────────────
 	app.Post("/auth/token", authHandler.GenerateToken)
 
 	// ─── Auth middleware ────────────────────────────────────
 	app.Use(middleware.AuthMiddleware())
 	app.Use(middleware.I18nMiddleware)
 
-	// ─── Products v1 ───────────────────────────────────────
+	// ─── v1 ────────────────────────────────────────────────
 	v1 := app.Group("/v1")
+
+	// Categories
+	v1.Get("/categories", categoryHandler.GetAll)
+	v1.Get("/categories/:id", categoryHandler.GetByID)
+
+	// Products
 	v1.Post("/products/search", productHandler.Search)
 	v1.Post("/products/create/items", productHandler.CreateItems)
 	v1.Get("/products/:id", productHandler.GetByID)
-	v1.Post("/products", productHandler.Create)
-	v1.Put("/products/:id", productHandler.Update)
-	v1.Delete("/products/:id", productHandler.Delete)
+	v1.Post("/products/create", productHandler.Create)
+	v1.Put("/products/update/:id", productHandler.Update)
+	v1.Delete("/products/delete/:id", productHandler.Delete)
 }
 
 func (s *APIServer) Start() {

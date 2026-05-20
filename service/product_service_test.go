@@ -9,7 +9,6 @@ import (
 )
 
 // ─── Mock Repository ───────────────────────────────────────
-// implement ProductRepository interface — ไม่พึ่ง library ใด
 
 type mockProductRepository struct {
 	searchResult []model.ProductResponse
@@ -27,7 +26,6 @@ type mockProductRepository struct {
 
 	deleteErr error
 
-	// Capture arguments
 	capturedCreateReq model.ProductCreateRequest
 	capturedUpdatedBy string
 	capturedDeleteID  int64
@@ -70,7 +68,6 @@ func TestSearch_Success(t *testing.T) {
 		},
 		searchTotal: 2,
 	}
-
 	result, err := newSvc(mock).Search(context.Background(), model.ProductSearchRequest{Page: 0, PageSize: 10})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -85,7 +82,7 @@ func TestSearch_Success(t *testing.T) {
 
 func TestSearch_InvalidPage(t *testing.T) {
 	_, err := newSvc(&mockProductRepository{}).Search(context.Background(), model.ProductSearchRequest{Page: -1})
-	assertValidationError(t, err, "INV001")
+	assertValidationError(t, err, "PRD006")
 }
 
 func TestSearch_InvalidPriceRange(t *testing.T) {
@@ -94,7 +91,7 @@ func TestSearch_InvalidPriceRange(t *testing.T) {
 		MinPrice: ptr(100.0),
 		MaxPrice: ptr(50.0),
 	})
-	assertValidationError(t, err, "INV002")
+	assertValidationError(t, err, "PRD007")
 }
 
 func TestSearch_DefaultPageSize(t *testing.T) {
@@ -141,7 +138,7 @@ func TestGetByID_InvalidID(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := newSvc(&mockProductRepository{}).GetByID(context.Background(), tc.id)
-			assertValidationError(t, err, "INV003")
+			assertValidationError(t, err, "PRD005")
 		})
 	}
 }
@@ -167,7 +164,7 @@ func TestCreate_Success(t *testing.T) {
 	mock := &mockProductRepository{createResult: expected}
 
 	result, err := newSvc(mock).Create(context.Background(), model.ProductCreateRequest{
-		Name: "Apple", Category: "Fruit", Price: 10.0, Stock: 100,
+		Name: "Apple", CategoryID: 1, Price: 10.0, Stock: 100,
 	}, "admin")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -175,7 +172,6 @@ func TestCreate_Success(t *testing.T) {
 	if result.ID != expected.ID {
 		t.Errorf("ID = %d, want %d", result.ID, expected.ID)
 	}
-	// ตรวจว่า repo ได้รับ request ที่ถูกต้อง
 	if mock.capturedCreateReq.Name != "Apple" {
 		t.Errorf("capturedName = %q, want 'Apple'", mock.capturedCreateReq.Name)
 	}
@@ -187,11 +183,11 @@ func TestCreate_ValidationErrors(t *testing.T) {
 		req      model.ProductCreateRequest
 		wantCode string
 	}{
-		{"empty name", model.ProductCreateRequest{Name: "", Category: "Fruit", Price: 10, Stock: 0}, "INV004"},
-		{"empty category", model.ProductCreateRequest{Name: "A", Category: "", Price: 10, Stock: 0}, "INV005"},
-		{"zero price", model.ProductCreateRequest{Name: "A", Category: "Fruit", Price: 0, Stock: 0}, "INV006"},
-		{"negative price", model.ProductCreateRequest{Name: "A", Category: "Fruit", Price: -1, Stock: 0}, "INV006"},
-		{"negative stock", model.ProductCreateRequest{Name: "A", Category: "Fruit", Price: 10, Stock: -1}, "INV007"},
+		{"empty name", model.ProductCreateRequest{Name: "", CategoryID: 1, Price: 10, Stock: 0}, "PRD001"},
+		{"zero categoryId", model.ProductCreateRequest{Name: "Apple", CategoryID: 0, Price: 10, Stock: 0}, "PRD002"},
+		{"zero price", model.ProductCreateRequest{Name: "Apple", CategoryID: 1, Price: 0, Stock: 0}, "PRD003"},
+		{"negative price", model.ProductCreateRequest{Name: "Apple", CategoryID: 1, Price: -1, Stock: 0}, "PRD003"},
+		{"negative stock", model.ProductCreateRequest{Name: "Apple", CategoryID: 1, Price: 10, Stock: -1}, "PRD004"},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -223,7 +219,7 @@ func TestUpdate_Success(t *testing.T) {
 
 func TestUpdate_NoFields(t *testing.T) {
 	_, err := newSvc(&mockProductRepository{}).Update(context.Background(), 1, model.ProductUpdateRequest{}, "admin")
-	assertValidationError(t, err, "INV008")
+	assertValidationError(t, err, "PRD008")
 }
 
 func TestUpdate_NotFound(t *testing.T) {
@@ -250,7 +246,7 @@ func TestDelete_Success(t *testing.T) {
 
 func TestDelete_InvalidID(t *testing.T) {
 	err := newSvc(&mockProductRepository{}).Delete(context.Background(), 0)
-	assertValidationError(t, err, "INV003")
+	assertValidationError(t, err, "PRD005")
 }
 
 func TestDelete_NotFound(t *testing.T) {

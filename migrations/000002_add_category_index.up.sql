@@ -1,4 +1,0 @@
--- 000002_create_categories_table.down.sql
-
-DROP INDEX IF EXISTS idx_categories_deleted_at;
-DROP TABLE IF EXISTS categories;

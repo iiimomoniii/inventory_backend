@@ -5,19 +5,19 @@ import "time"
 // ─── Request ───────────────────────────────────────────────
 
 type ProductSearchRequest struct {
-	Name     *string  `json:"name,omitempty"`
-	Category *string  `json:"category,omitempty"`
-	MinPrice *float64 `json:"minPrice,omitempty"`
-	MaxPrice *float64 `json:"maxPrice,omitempty"`
-	Page     int      `json:"page"`
-	PageSize int      `json:"pageSize"`
+	Name       *string  `json:"name,omitempty"`
+	CategoryID *int64   `json:"categoryId,omitempty"`
+	MinPrice   *float64 `json:"minPrice,omitempty"`
+	MaxPrice   *float64 `json:"maxPrice,omitempty"`
+	Page       int      `json:"page"`
+	PageSize   int      `json:"pageSize"`
 }
 
 type ProductCreateRequest struct {
-	Name     string  `json:"name"`
-	Category string  `json:"category"`
-	Price    float64 `json:"price"`
-	Stock    int     `json:"stock"`
+	Name       string  `json:"name"`
+	CategoryID int64   `json:"categoryId"`
+	Price      float64 `json:"price"`
+	Stock      int     `json:"stock"`
 }
 
 type ProductUpdateRequest struct {
@@ -28,13 +28,14 @@ type ProductUpdateRequest struct {
 // ─── Response ──────────────────────────────────────────────
 
 type ProductResponse struct {
-	ID        int64     `json:"id"`
-	Name      string    `json:"name"`
-	Category  string    `json:"category"`
-	Price     float64   `json:"price"`
-	Stock     int       `json:"stock"`
-	CreatedAt time.Time `json:"createdAt"`
-	UpdatedAt time.Time `json:"updatedAt"`
+	ID           int64     `json:"id"`
+	Name         string    `json:"name"`
+	CategoryID   int64     `json:"categoryId"`
+	CategoryName string    `json:"categoryName"` // ← join จาก categories
+	Price        float64   `json:"price"`
+	Stock        int       `json:"stock"`
+	CreatedAt    time.Time `json:"createdAt"`
+	UpdatedAt    time.Time `json:"updatedAt"`
 }
 
 type ProductSearchResponse struct {
