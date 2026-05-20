@@ -7,11 +7,13 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/iiimomoniii/inventory_backend/config"
+	_ "github.com/iiimomoniii/inventory_backend/docs"
 	"github.com/iiimomoniii/inventory_backend/handler"
 	"github.com/iiimomoniii/inventory_backend/middleware"
 	"github.com/iiimomoniii/inventory_backend/repository"
 	"github.com/iiimomoniii/inventory_backend/service"
 	"github.com/iiimomoniii/inventory_backend/utils"
+	fiberSwagger "github.com/swaggo/fiber-swagger"
 )
 
 type APIServer struct {
@@ -66,6 +68,8 @@ func registerRoutes(
 	app.Get("/live", func(c *fiber.Ctx) error {
 		return c.SendString("OK")
 	})
+
+	app.Get("/swagger/*", fiberSwagger.WrapHandler)
 
 	app.Post("/auth/token",
 		limiter.New(limiter.Config{

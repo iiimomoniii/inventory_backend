@@ -8,6 +8,15 @@ import (
 	routes "github.com/iiimomoniii/inventory_backend/route"
 )
 
+// @title Inventory Backend API
+// @version 1.0
+// @description Inventory Backend API documentation
+// @host localhost:8080
+// @BasePath /
+// @schemes http
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 func main() {
 	// รับ -env flag จาก command line
 	env := flag.String("env", "dev", "environment: dev, qa, uat, prod")

@@ -1,0 +1,167 @@
+basePath: /
+definitions:
+  model.RefreshTokenRequest:
+    properties:
+      refreshToken:
+        type: string
+    type: object
+  model.Response:
+    properties:
+      data: {}
+      message:
+        type: string
+      status:
+        type: integer
+    type: object
+  model.TokenRequest:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: Inventory Backend API documentation
+  title: Inventory Backend API
+  version: "1.0"
+paths:
+  /auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: Logout and revoke refresh token
+      parameters:
+      - description: Refresh Token
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.RefreshTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.Response'
+      summary: Logout
+      tags:
+      - Auth
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Refresh access token using refresh token
+      parameters:
+      - description: Refresh Token
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.RefreshTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.Response'
+      summary: Refresh JWT token
+      tags:
+      - Auth
+  /auth/token:
+    post:
+      consumes:
+      - application/json
+      description: Login and generate access token
+      parameters:
+      - description: Login Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.TokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.Response'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/model.Response'
+      summary: Generate JWT token
+      tags:
+      - Auth
+  /v1/categories:
+    get:
+      responses: {}
+      summary: Get all categories
+  /v1/categories/:id:
+    get:
+      responses: {}
+      summary: Get category by ID
+  /v1/products/:id:
+    get:
+      responses: {}
+      summary: Get product by ID
+  /v1/products/create:
+    post:
+      responses: {}
+      summary: Create product (single)
+  /v1/products/create/items:
+    post:
+      responses: {}
+      summary: Create products (bulk)
+  /v1/products/delete/:id:
+    delete:
+      responses: {}
+      summary: Delete product
+  /v1/products/search:
+    post:
+      responses: {}
+      summary: Search products
+  /v1/products/update/:id:
+    put:
+      responses: {}
+      summary: Update product
+  /v1/users/create:
+    post:
+      responses: {}
+      summary: Create user
+schemes:
+- http
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

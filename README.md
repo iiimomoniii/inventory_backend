@@ -61,6 +61,9 @@ go get golang.org/x/crypto/bcrypt
 
 go get github.com/gofiber/fiber/v2/middleware/limiter@v2.52.13
 
+go install github.com/swaggo/swag/cmd/swag@latest
+go get github.com/swaggo/fiber-swagger
+go get github.com/swaggo/files
 # ตรวจสอบ go.mod และ go.sum
 go mod tidy
 ```

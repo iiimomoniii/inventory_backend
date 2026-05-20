@@ -19,6 +19,15 @@ func NewAuthHandler(authService service.AuthService) *AuthHandler {
 
 // GenerateToken godoc
 // @Summary Generate JWT token
+// @Description Login and generate access token
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body model.TokenRequest true "Login Request"
+// @Success 200 {object} model.Response
+// @Failure 400 {object} model.Response
+// @Failure 401 {object} model.Response
+// @Failure 429 {object} model.Response
 // @Router /auth/token [post]
 func (h *AuthHandler) GenerateToken(c *fiber.Ctx) error {
 	var req model.TokenRequest
@@ -49,6 +58,14 @@ func (h *AuthHandler) GenerateToken(c *fiber.Ctx) error {
 
 // RefreshToken godoc
 // @Summary Refresh JWT token
+// @Description Refresh access token using refresh token
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body model.RefreshTokenRequest true "Refresh Token"
+// @Success 200 {object} model.Response
+// @Failure 400 {object} model.Response
+// @Failure 401 {object} model.Response
 // @Router /auth/refresh [post]
 func (h *AuthHandler) RefreshToken(c *fiber.Ctx) error {
 	var req model.RefreshTokenRequest
@@ -79,6 +96,14 @@ func (h *AuthHandler) RefreshToken(c *fiber.Ctx) error {
 
 // Logout godoc
 // @Summary Logout
+// @Description Logout and revoke refresh token
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body model.RefreshTokenRequest true "Refresh Token"
+// @Success 200 {object} model.Response
+// @Failure 400 {object} model.Response
+// @Failure 401 {object} model.Response
 // @Router /auth/logout [post]
 func (h *AuthHandler) Logout(c *fiber.Ctx) error {
 	var req model.RefreshTokenRequest
