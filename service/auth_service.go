@@ -11,6 +11,7 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/iiimomoniii/inventory_backend/model"
 	"github.com/iiimomoniii/inventory_backend/repository"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // ─── Interface ─────────────────────────────────────────────
@@ -27,8 +28,8 @@ type AuthServiceImpl struct {
 	UserRepo         repository.UserRepository
 	RefreshTokenRepo repository.RefreshTokenRepository
 	SecretKey        string
-	ExpiresIn        int // access token seconds
-	RefreshExpiresIn int // refresh token days
+	ExpiresIn        int
+	RefreshExpiresIn int
 }
 
 func NewAuthService(
@@ -42,7 +43,7 @@ func NewAuthService(
 		RefreshTokenRepo: refreshTokenRepo,
 		SecretKey:        secretKey,
 		ExpiresIn:        expiresIn,
-		RefreshExpiresIn: 7, // 7 วัน
+		RefreshExpiresIn: 7,
 	}
 }
 
@@ -57,8 +58,8 @@ func (s *AuthServiceImpl) Login(ctx context.Context, username, password string) 
 		return nil, fmt.Errorf("login failed: %w", err)
 	}
 
-	// 2. เช็ค password (TODO: bcrypt)
-	if user.Password != password {
+	// 2. เช็ค password ด้วย bcrypt
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
 		return nil, &ServiceError{Code: "GLB004"}
 	}
 
@@ -88,29 +89,22 @@ func (s *AuthServiceImpl) Login(ctx context.Context, username, password string) 
 }
 
 func (s *AuthServiceImpl) Refresh(ctx context.Context, refreshToken string) (*model.TokenResponse, error) {
-	// 1. หา refresh token จาก DB
 	rt, err := s.RefreshTokenRepo.FindByToken(ctx, refreshToken)
 	if err != nil {
 		return nil, &ServiceError{Code: "GLB004"}
 	}
-
-	// 2. เช็คว่า revoke แล้วหรือยัง
 	if rt.RevokedAt != nil {
 		return nil, &ServiceError{Code: "GLB004"}
 	}
-
-	// 3. เช็คหมดอายุ
 	if time.Now().After(rt.ExpiresAt) {
 		return nil, &ServiceError{Code: "GLB004"}
 	}
 
-	// 4. หา user จาก DB
 	user, err := s.UserRepo.FindByID(ctx, rt.UserID)
 	if err != nil {
 		return nil, fmt.Errorf("find user failed: %w", err)
 	}
 
-	// 5. สร้าง access token ใหม่
 	accessToken, err := s.generateJWT(user)
 	if err != nil {
 		return nil, fmt.Errorf("generate access token failed: %w", err)
@@ -118,7 +112,7 @@ func (s *AuthServiceImpl) Refresh(ctx context.Context, refreshToken string) (*mo
 
 	return &model.TokenResponse{
 		AccessToken:  accessToken,
-		RefreshToken: refreshToken, // คืน refresh token เดิม
+		RefreshToken: refreshToken,
 		TokenType:    "Bearer",
 		ExpiresIn:    s.ExpiresIn,
 	}, nil
@@ -157,4 +151,13 @@ func (s *AuthServiceImpl) generateRefreshToken() (string, time.Time, error) {
 	token := hex.EncodeToString(b)
 	expiresAt := time.Now().AddDate(0, 0, s.RefreshExpiresIn)
 	return token, expiresAt, nil
+}
+
+// HashPassword — ใช้ตอน create user ใหม่
+func HashPassword(password string) (string, error) {
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return "", fmt.Errorf("hash password failed: %w", err)
+	}
+	return string(hash), nil
 }

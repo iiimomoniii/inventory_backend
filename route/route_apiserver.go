@@ -40,19 +40,26 @@ func NewAPIServer(cfg config.AppConfig, sqlDB *sql.DB) App {
 	// ─── Services ──────────────────────────────────────────
 	productSvc := service.NewProductService(productRepo)
 	authSvc := service.NewAuthService(userRepo, refreshTokenRepo, cfg.JWT.Secret, cfg.JWT.ExpiresIn)
+	userSvc := service.NewUserService(userRepo)
 
 	// ─── Handlers ──────────────────────────────────────────
 	productHandler := handler.NewProductHandler(productSvc)
 	categoryHandler := handler.NewCategoryHandler(categoryRepo)
 	authHandler := handler.NewAuthHandler(authSvc)
+	userHandler := handler.NewUserHandler(userSvc)
 
-	registerRoutes(app, productHandler, categoryHandler, authHandler)
+	registerRoutes(app, productHandler, categoryHandler, authHandler, userHandler)
 
 	return &APIServer{server: app, cfg: cfg}
 }
 
-func registerRoutes(app *fiber.App, productHandler *handler.ProductHandler, categoryHandler *handler.CategoryHandler, authHandler *handler.AuthHandler) {
-
+func registerRoutes(
+	app *fiber.App,
+	productHandler *handler.ProductHandler,
+	categoryHandler *handler.CategoryHandler,
+	authHandler *handler.AuthHandler,
+	userHandler *handler.UserHandler,
+) {
 	// ─── Public ────────────────────────────────────────────
 	app.Get("/live", func(c *fiber.Ctx) error {
 		return c.SendString("OK")
@@ -61,24 +68,31 @@ func registerRoutes(app *fiber.App, productHandler *handler.ProductHandler, cate
 	app.Post("/auth/refresh", authHandler.RefreshToken)
 	app.Post("/auth/logout", authHandler.Logout)
 
+	app.Post("/v1/users/create", userHandler.Create)
+
 	// ─── Auth middleware ────────────────────────────────────
 	app.Use(middleware.AuthMiddleware())
 	app.Use(middleware.I18nMiddleware)
 
-	// ─── v1 ────────────────────────────────────────────────
 	v1 := app.Group("/v1")
 
-	// Categories
-	v1.Get("/categories", categoryHandler.GetAll)
-	v1.Get("/categories/:id", categoryHandler.GetByID)
+	// public
+	v1.Post("/users/create", userHandler.Create)
 
-	// Products
-	v1.Post("/products/search", productHandler.Search)
-	v1.Post("/products/create/items", productHandler.CreateItems)
-	v1.Post("/products/create", productHandler.Create)
-	v1.Get("/products/:id", productHandler.GetByID)
-	v1.Put("/products/update/:id", productHandler.Update)
-	v1.Delete("/products/delete/:id", productHandler.Delete)
+	// auth
+	app.Use(middleware.AuthMiddleware())
+
+	private := app.Group("/v1")
+
+	private.Get("/categories", categoryHandler.GetAll)
+	private.Get("/categories/:id", categoryHandler.GetByID)
+
+	private.Post("/products/search", productHandler.Search)
+	private.Post("/products/create/items", productHandler.CreateItems)
+	private.Post("/products/create", productHandler.Create)
+	private.Get("/products/:id", productHandler.GetByID)
+	private.Put("/products/update/:id", productHandler.Update)
+	private.Delete("/products/delete/:id", productHandler.Delete)
 }
 
 func (s *APIServer) Start() {

@@ -14,6 +14,7 @@ import (
 type UserRepository interface {
 	FindByUsername(ctx context.Context, username string) (*model.User, error)
 	FindByID(ctx context.Context, id int64) (*model.User, error)
+	Create(ctx context.Context, req model.UserCreateRequest, createdBy string) (*model.UserResponse, error)
 }
 
 // ─── Implementation ────────────────────────────────────────
@@ -64,6 +65,20 @@ func (r *UserRepositoryImpl) FindByID(ctx context.Context, id int64) (*model.Use
 			return nil, &model.NotFoundError{}
 		}
 		return nil, fmt.Errorf("find user by id failed: %w", err)
+	}
+	return &u, nil
+}
+
+func (r *UserRepositoryImpl) Create(ctx context.Context, req model.UserCreateRequest, createdBy string) (*model.UserResponse, error) {
+	var u model.UserResponse
+	err := r.DB.QueryRowContext(ctx, `
+		INSERT INTO users (username, password, name, role, created_by, updated_by)
+		VALUES ($1, $2, $3, $4, $5, $5)
+		RETURNING id, username, name, role, created_by, updated_by`,
+		req.Username, req.Password, req.Name, req.Role, createdBy,
+	).Scan(&u.ID, &u.Username, &u.Name, &u.Role, &u.CreatedBy, &u.UpdatedBy)
+	if err != nil {
+		return nil, fmt.Errorf("create user failed: %w", err)
 	}
 	return &u, nil
 }

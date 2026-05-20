@@ -57,6 +57,8 @@ go get github.com/golang-migrate/migrate/v4/source/file
 
 go get github.com/lib/pq
 
+go get golang.org/x/crypto/bcrypt
+
 # ตรวจสอบ go.mod และ go.sum
 go mod tidy
 ```

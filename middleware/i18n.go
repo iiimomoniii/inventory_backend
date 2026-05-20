@@ -15,6 +15,11 @@ func InitI18n() {
 	if err := utils.LoadLocaleFile("locales/product_errors.json"); err != nil {
 		panic(err)
 	}
+
+	// User
+	if err := utils.LoadLocaleFile("locales/user_error.json"); err != nil {
+		panic(err)
+	}
 	// ─── เพิ่ม module ใหม่ตรงนี้ ───────────────────────────
 	// utils.LoadLocaleFile("locales/user.json")
 	// utils.LoadLocaleFile("locales/order.json")
