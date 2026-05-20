@@ -35,10 +35,11 @@ func NewAPIServer(cfg config.AppConfig, sqlDB *sql.DB) App {
 	productRepo := repository.NewProductRepository(sqlDB)
 	categoryRepo := repository.NewCategoryRepository(sqlDB)
 	userRepo := repository.NewUserRepository(sqlDB)
+	refreshTokenRepo := repository.NewRefreshTokenRepository(sqlDB)
 
 	// ─── Services ──────────────────────────────────────────
 	productSvc := service.NewProductService(productRepo)
-	authSvc := service.NewAuthService(userRepo, cfg.JWT.Secret, cfg.JWT.ExpiresIn)
+	authSvc := service.NewAuthService(userRepo, refreshTokenRepo, cfg.JWT.Secret, cfg.JWT.ExpiresIn)
 
 	// ─── Handlers ──────────────────────────────────────────
 	productHandler := handler.NewProductHandler(productSvc)
@@ -57,6 +58,8 @@ func registerRoutes(app *fiber.App, productHandler *handler.ProductHandler, cate
 		return c.SendString("OK")
 	})
 	app.Post("/auth/token", authHandler.GenerateToken)
+	app.Post("/auth/refresh", authHandler.RefreshToken)
+	app.Post("/auth/logout", authHandler.Logout)
 
 	// ─── Auth middleware ────────────────────────────────────
 	app.Use(middleware.AuthMiddleware())
@@ -72,8 +75,8 @@ func registerRoutes(app *fiber.App, productHandler *handler.ProductHandler, cate
 	// Products
 	v1.Post("/products/search", productHandler.Search)
 	v1.Post("/products/create/items", productHandler.CreateItems)
-	v1.Get("/products/:id", productHandler.GetByID)
 	v1.Post("/products/create", productHandler.Create)
+	v1.Get("/products/:id", productHandler.GetByID)
 	v1.Put("/products/update/:id", productHandler.Update)
 	v1.Delete("/products/delete/:id", productHandler.Delete)
 }

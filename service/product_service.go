@@ -31,16 +31,14 @@ func NewProductService(repo repository.ProductRepository) *ProductServiceImpl {
 }
 
 func (s *ProductServiceImpl) Search(ctx context.Context, req model.ProductSearchRequest) (*model.ProductSearchResponse, error) {
-	// Priority 1 — page
 	if req.Page < 0 {
-		return nil, &model.ValidationError{Code: "PRD006"}
+		return nil, &ServiceError{Code: "PRD006"}
 	}
 	if req.PageSize <= 0 {
 		req.PageSize = 20
 	}
-	// Priority 2 — price range
 	if req.MinPrice != nil && req.MaxPrice != nil && *req.MinPrice > *req.MaxPrice {
-		return nil, &model.ValidationError{Code: "PRD007"}
+		return nil, &ServiceError{Code: "PRD007"}
 	}
 
 	products, total, err := s.Repo.Search(ctx, req)
@@ -64,7 +62,7 @@ func (s *ProductServiceImpl) Search(ctx context.Context, req model.ProductSearch
 
 func (s *ProductServiceImpl) GetByID(ctx context.Context, id int64) (*model.ProductResponse, error) {
 	if id <= 0 {
-		return nil, &model.ValidationError{Code: "PRD005"}
+		return nil, &ServiceError{Code: "PRD005"}
 	}
 	return s.Repo.FindByID(ctx, id)
 }
@@ -72,21 +70,17 @@ func (s *ProductServiceImpl) GetByID(ctx context.Context, id int64) (*model.Prod
 func (s *ProductServiceImpl) Create(ctx context.Context, req model.ProductCreateRequest, createdBy string) (*model.ProductResponse, error) {
 	req.Name = strings.TrimSpace(req.Name)
 
-	// Priority 1 — name
 	if req.Name == "" {
-		return nil, &model.ValidationError{Code: "PRD001"}
+		return nil, &ServiceError{Code: "PRD001"}
 	}
-	// Priority 2 — categoryId
 	if req.CategoryID <= 0 {
-		return nil, &model.ValidationError{Code: "PRD002"}
+		return nil, &ServiceError{Code: "PRD002"}
 	}
-	// Priority 3 — price
 	if req.Price <= 0 {
-		return nil, &model.ValidationError{Code: "PRD003"}
+		return nil, &ServiceError{Code: "PRD003"}
 	}
-	// Priority 4 — stock
 	if req.Stock < 0 {
-		return nil, &model.ValidationError{Code: "PRD004"}
+		return nil, &ServiceError{Code: "PRD004"}
 	}
 
 	product, err := s.Repo.Create(ctx, req, createdBy)
@@ -97,21 +91,17 @@ func (s *ProductServiceImpl) Create(ctx context.Context, req model.ProductCreate
 }
 
 func (s *ProductServiceImpl) Update(ctx context.Context, id int64, req model.ProductUpdateRequest, updatedBy string) (*model.ProductResponse, error) {
-	// Priority 1 — id
 	if id <= 0 {
-		return nil, &model.ValidationError{Code: "PRD005"}
+		return nil, &ServiceError{Code: "PRD005"}
 	}
-	// Priority 2 — ต้องมีอย่างน้อย 1 field
 	if req.Price == nil && req.Stock == nil {
-		return nil, &model.ValidationError{Code: "PRD008"}
+		return nil, &ServiceError{Code: "PRD008"}
 	}
-	// Priority 3 — price
 	if req.Price != nil && *req.Price <= 0 {
-		return nil, &model.ValidationError{Code: "PRD003"}
+		return nil, &ServiceError{Code: "PRD003"}
 	}
-	// Priority 4 — stock
 	if req.Stock != nil && *req.Stock < 0 {
-		return nil, &model.ValidationError{Code: "PRD004"}
+		return nil, &ServiceError{Code: "PRD004"}
 	}
 
 	return s.Repo.Update(ctx, id, req, updatedBy)
@@ -119,7 +109,7 @@ func (s *ProductServiceImpl) Update(ctx context.Context, id int64, req model.Pro
 
 func (s *ProductServiceImpl) Delete(ctx context.Context, id int64) error {
 	if id <= 0 {
-		return &model.ValidationError{Code: "PRD005"}
+		return &ServiceError{Code: "PRD005"}
 	}
 	if err := s.Repo.Delete(ctx, id); err != nil {
 		var notFound *model.NotFoundError
